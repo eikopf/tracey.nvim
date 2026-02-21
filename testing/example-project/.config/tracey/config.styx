@@ -1,12 +1,14 @@
-project {
-  name "example-project"
-  root "../.."
-
-  specs {
-    glob "specs/**/*.md"
+specs (
+  {
+    name example-project-spec
+    include (spec/**/*.md)
+    impls (
+      {
+        name rust
+        include (src/**/*.rs)
+        exclude (target/**)
+        test_include (tests/**.*rs)
+      }
+    )
   }
-
-  sources {
-    glob "src/**/*.rs"
-  }
-}
+)
