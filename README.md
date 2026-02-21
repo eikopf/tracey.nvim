@@ -21,7 +21,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ## Setup
 
-Calling `setup()` is optional. The plugin ships a `lsp/tracey.lua` that Neovim 0.11+ auto-discovers, so you can also just call:
+Calling `setup()` is optional. The plugin ships an `lsp/tracey.lua` that Neovim 0.11+ auto-discovers, so you can also just call:
 
 ```lua
 vim.lsp.enable('tracey')
