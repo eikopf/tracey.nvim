@@ -10,5 +10,5 @@ return {
     'typescript',
     'typescriptreact',
   },
-  root_markers = { '.config/tracey' },
+  root_markers = { '.tracey', 'Cargo.toml' },
 }
