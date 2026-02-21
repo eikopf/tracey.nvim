@@ -1,4 +1,4 @@
-*tracey.txt*  Neovim integration for tracey spec coverage
+*tracey.nvim*  Neovim integration for tracey spec coverage
 
 Author:   Oliver
 License:  MIT
@@ -62,7 +62,7 @@ optional.
     enable = true,            -- call vim.lsp.enable('tracey') (default: true)
     cmd = { 'tracey', 'lsp' },  -- LSP server command
     filetypes = { 'rust', 'markdown' }, -- filetypes to attach to
-    root_markers = { '.config/tracey' }, -- root detection markers
+    root_markers = { '.tracey', 'Cargo.toml' }, -- root detection markers
     settings = {},            -- LSP settings table
     on_attach = function(client, bufnr)
       -- your keybindings here
