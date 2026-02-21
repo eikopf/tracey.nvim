@@ -1,0 +1,81 @@
+local M = {}
+
+---@type table<string, fun()>
+local subcommands = {
+  info = function()
+    local tracey = require('tracey')
+    local clients = tracey.get_clients()
+    if #clients == 0 then
+      vim.notify('tracey: no active clients', vim.log.levels.INFO)
+      return
+    end
+    for _, client in ipairs(clients) do
+      vim.notify(
+        string.format(
+          'tracey: client id=%d root=%s pid=%s',
+          client.id,
+          client.root_dir or '(none)',
+          client.server_info and client.server_info.pid or '(unknown)'
+        ),
+        vim.log.levels.INFO
+      )
+    end
+  end,
+
+  restart = function()
+    require('tracey').restart()
+    vim.notify('tracey: restarting', vim.log.levels.INFO)
+  end,
+
+  stop = function()
+    local clients = require('tracey').get_clients()
+    if #clients == 0 then
+      vim.notify('tracey: no active clients', vim.log.levels.INFO)
+      return
+    end
+    for _, client in ipairs(clients) do
+      client:stop()
+    end
+    vim.notify('tracey: stopped', vim.log.levels.INFO)
+  end,
+
+  start = function()
+    vim.lsp.enable('tracey')
+    vim.notify('tracey: started', vim.log.levels.INFO)
+  end,
+
+  log = function()
+    vim.cmd.edit(vim.lsp.log.get_filename())
+  end,
+}
+
+local sorted_names = vim.tbl_keys(subcommands)
+table.sort(sorted_names)
+
+---@param args { args: string, fargs: string[] }
+function M.run(args)
+  local name = args.fargs[1]
+  if not name or name == '' then
+    -- Default to :Tracey info
+    subcommands.info()
+    return
+  end
+  local cmd = subcommands[name]
+  if not cmd then
+    vim.notify('tracey: unknown command "' .. name .. '"', vim.log.levels.ERROR)
+    return
+  end
+  cmd()
+end
+
+---@param arg_lead string
+---@param _cmdline string
+---@param _cursor_pos integer
+---@return string[]
+function M.complete(arg_lead, _cmdline, _cursor_pos)
+  return vim.tbl_filter(function(name)
+    return name:find(arg_lead, 1, true) == 1
+  end, sorted_names)
+end
+
+return M
