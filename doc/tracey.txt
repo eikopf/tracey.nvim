@@ -1,0 +1,147 @@
+*tracey.txt*  Neovim integration for tracey spec coverage
+
+Author:   Oliver
+License:  MIT
+Homepage: https://github.com/eikopf/tracey.nvim
+
+==============================================================================
+CONTENTS                                                     *tracey-contents*
+
+  1. Introduction ............................. |tracey-introduction|
+  2. Requirements ............................. |tracey-requirements|
+  3. Installation ............................. |tracey-installation|
+  4. Configuration ............................ |tracey-configuration|
+  5. Commands ................................. |tracey-commands|
+  6. Lua API .................................. |tracey-api|
+  7. Health check ............................. |tracey-health|
+
+==============================================================================
+1. INTRODUCTION                                          *tracey-introduction*
+
+tracey.nvim integrates Neovim with tracey, a spec coverage and traceability
+toolkit for Rust codebases. It provides:
+
+- LSP integration for real-time feedback on requirement references
+- CLI wrappers for querying coverage status
+- Web dashboard launcher
+
+tracey uses annotations like `r[requirement.id]` in markdown specs and
+`r[impl requirement.id]` in code comments to track traceability between
+specifications and implementations.
+
+==============================================================================
+2. REQUIREMENTS                                          *tracey-requirements*
+
+- Neovim >= 0.11
+- tracey binary in PATH (https://github.com/bearcove/tracey)
+- A `.config/tracey/config.styx` file in your project root
+
+==============================================================================
+3. INSTALLATION                                          *tracey-installation*
+
+With lazy.nvim: >lua
+  {
+    'eikopf/tracey.nvim',
+    opts = {},
+  }
+<
+With no plugin manager (Neovim 0.11+ auto-discovers `lsp/tracey.lua`): >lua
+  -- In your init.lua, just enable the LSP:
+  vim.lsp.enable('tracey')
+<
+Calling `setup()` is optional. The base LSP config in `lsp/tracey.lua` is
+auto-discovered by Neovim 0.11+.
+
+==============================================================================
+4. CONFIGURATION                                        *tracey-configuration*
+
+Call `require('tracey').setup(opts)` to override defaults. All fields are
+optional.
+>lua
+  require('tracey').setup({
+    enable = true,            -- call vim.lsp.enable('tracey') (default: true)
+    cmd = { 'tracey', 'lsp' },  -- LSP server command
+    filetypes = { 'rust', 'markdown' }, -- filetypes to attach to
+    root_markers = { '.config/tracey' }, -- root detection markers
+    settings = {},            -- LSP settings table
+    on_attach = function(client, bufnr)
+      -- your keybindings here
+    end,
+    lsp = {},                 -- escape hatch: passed verbatim to vim.lsp.config()
+  })
+<
+                                                           *tracey.Config*
+Fields ~
+
+  `enable`        boolean   Whether setup() calls vim.lsp.enable('tracey').
+                            Default: `true`
+  `cmd`           string[]  LSP server command override.
+  `filetypes`     string[]  Filetype override for LSP attachment.
+  `root_markers`  string[]  Root marker override for project detection.
+  `settings`      table     LSP settings override.
+  `on_attach`     function  Callback invoked on LSP attach.
+                            Signature: `fun(client, bufnr)`
+  `lsp`           table     Escape hatch: merged verbatim into vim.lsp.config().
+
+==============================================================================
+5. COMMANDS                                                *tracey-commands*
+
+All commands are accessed through the `:Tracey` user command.
+
+                                                             *:Tracey*
+:Tracey [subcommand]
+
+  Without arguments, defaults to `:Tracey info`.
+
+Subcommands ~
+
+  `info`          Show active tracey LSP client info (id, root, version).
+  `start`         Enable the tracey LSP server.
+  `stop`          Stop all active tracey LSP clients.
+  `restart`       Restart all tracey LSP clients.
+  `log`           Open the LSP log file in a buffer.
+  `status`        Run `tracey query status` and show coverage overview.
+  `uncovered`     Run `tracey query uncovered` to list rules without
+                  implementation references.
+  `untested`      Run `tracey query untested` to list rules without
+                  verification references.
+  `stale`         Run `tracey query stale` to list stale references.
+  `web`           Start the tracey web dashboard in the background.
+
+Query results open in a read-only scratch buffer. Press `q` to close.
+
+Tab completion is supported for all subcommands.
+
+==============================================================================
+6. LUA API                                                    *tracey-api*
+
+                                                             *tracey.setup()*
+require('tracey').setup({opts})
+  Configure and optionally start the tracey LSP. See |tracey-configuration|.
+
+                                                       *tracey.get_clients()*
+require('tracey').get_clients({bufnr})
+  Get active tracey LSP clients.
+
+  Parameters: ~
+    {bufnr}  (integer|nil) optional buffer number to filter by
+
+  Returns: ~
+    vim.lsp.Client[]
+
+                                                          *tracey.restart()*
+require('tracey').restart()
+  Restart all tracey LSP clients. Re-enables after a short delay.
+
+==============================================================================
+7. HEALTH CHECK                                              *tracey-health*
+
+Run `:checkhealth tracey` to verify your setup. The health check reports:
+
+- Neovim version (>= 0.11 required)
+- tracey binary presence and version
+- `.config/tracey/` directory and `config.styx` presence
+- Active LSP client status
+
+==============================================================================
+ vim:tw=78:ft=help:norl:

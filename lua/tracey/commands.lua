@@ -12,10 +12,10 @@ local subcommands = {
     for _, client in ipairs(clients) do
       vim.notify(
         string.format(
-          'tracey: client id=%d root=%s pid=%s',
+          'tracey: client id=%d root=%s version=%s',
           client.id,
           client.root_dir or '(none)',
-          client.server_info and client.server_info.pid or '(unknown)'
+          client.server_info and client.server_info.version or '(unknown)'
         ),
         vim.log.levels.INFO
       )
@@ -45,7 +45,32 @@ local subcommands = {
   end,
 
   log = function()
-    vim.cmd.edit(vim.lsp.log.get_filename())
+    local logfile = vim.lsp.log.get_filename()
+    if not vim.uv.fs_stat(logfile) then
+      vim.notify('tracey: log file does not exist yet: ' .. logfile, vim.log.levels.WARN)
+      return
+    end
+    vim.cmd.edit(logfile)
+  end,
+
+  status = function()
+    require('tracey.cli').query('status')
+  end,
+
+  uncovered = function()
+    require('tracey.cli').query('uncovered')
+  end,
+
+  untested = function()
+    require('tracey.cli').query('untested')
+  end,
+
+  stale = function()
+    require('tracey.cli').query('stale')
+  end,
+
+  web = function()
+    require('tracey.cli').web()
   end,
 }
 

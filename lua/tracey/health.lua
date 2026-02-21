@@ -14,9 +14,13 @@ function M.check()
   local tracey_bin = vim.fn.exepath('tracey')
   if tracey_bin ~= '' then
     vim.health.ok('tracey binary found: ' .. tracey_bin)
-    local result = vim.system({ 'tracey', '--version' }, { text = true }):wait()
-    if result.code == 0 and result.stdout then
+    local ok, result = pcall(function()
+      return vim.system({ 'tracey', '--version' }, { text = true }):wait()
+    end)
+    if ok and result.code == 0 and result.stdout then
       vim.health.info('version: ' .. vim.trim(result.stdout))
+    elseif not ok then
+      vim.health.warn('Could not run tracey --version: ' .. tostring(result))
     end
   else
     vim.health.error('tracey binary not found in PATH', {
