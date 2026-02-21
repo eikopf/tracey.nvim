@@ -7,6 +7,7 @@ local M = {}
 ---@field root_markers? string[] Root marker override
 ---@field settings? table LSP settings override
 ---@field on_attach? fun(client: vim.lsp.Client, bufnr: integer) Callback on attach
+---@field web_port? integer Port for `tracey web` (omitted if nil, letting tracey choose)
 ---@field lsp? table Escape hatch: passed verbatim to vim.lsp.config()
 
 ---@type tracey.Config

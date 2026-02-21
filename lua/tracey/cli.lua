@@ -78,7 +78,12 @@ function M.web()
     return
   end
 
+  local cfg = require('tracey.config').get()
   local cmd = { 'tracey', 'web', '--open' }
+  if cfg.web_port then
+    table.insert(cmd, '--port')
+    table.insert(cmd, tostring(cfg.web_port))
+  end
   local root = M.find_root()
   if root then
     table.insert(cmd, root)

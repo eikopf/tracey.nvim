@@ -67,6 +67,7 @@ optional.
     on_attach = function(client, bufnr)
       -- your keybindings here
     end,
+    web_port = nil,           -- port for `tracey web` (nil = let tracey choose)
     lsp = {},                 -- escape hatch: passed verbatim to vim.lsp.config()
   })
 <
@@ -81,6 +82,8 @@ Fields ~
   `settings`      table     LSP settings override.
   `on_attach`     function  Callback invoked on LSP attach.
                             Signature: `fun(client, bufnr)`
+  `web_port`      integer   Port for `tracey web`. When nil (the default), no
+                            port is passed and tracey picks its own default.
   `lsp`           table     Escape hatch: merged verbatim into vim.lsp.config().
 
 ==============================================================================
@@ -107,6 +110,7 @@ Subcommands ~
                   verification references.
   `stale`         Run `tracey query stale` to list stale references.
   `web`           Start the tracey web dashboard in the background.
+                  Uses `web_port` from config if set (see |tracey.Config|).
 
 Query results open in a read-only scratch buffer. Press `q` to close.
 
