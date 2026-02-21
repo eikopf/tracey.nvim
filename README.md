@@ -6,7 +6,7 @@ Neovim plugin for [tracey](https://github.com/bearcove/tracey), a spec coverage 
 
 - Neovim >= 0.11
 - [tracey](https://github.com/bearcove/tracey) installed and in your `PATH`
-- A `.config/tracey/config.styx` in your project root
+- A tracey project (detected via `.tracey` directory or `Cargo.toml`)
 
 ## Installation
 
@@ -31,14 +31,19 @@ If you want to customize behavior, call `setup()` with any of the options below:
 
 ```lua
 require('tracey').setup({
-  enable = true,            -- auto-call vim.lsp.enable('tracey') (default: true)
-  cmd = { 'tracey', 'lsp' }, -- LSP server command
-  filetypes = { 'rust', 'markdown' }, -- filetypes to attach to
-  root_markers = { '.config/tracey' },
+  enable = true,                        -- auto-call vim.lsp.enable('tracey') (default: true)
+  cmd = { 'tracey', 'lsp' },           -- LSP server command
+  filetypes = {                         -- filetypes to attach to
+    'css', 'go', 'javascript', 'markdown',
+    'python', 'rust', 'typescript', 'typescriptreact',
+  },
+  root_markers = { '.tracey', 'Cargo.toml' }, -- root detection markers
+  settings = {},                        -- LSP settings table
   on_attach = function(client, bufnr)
     -- your keymaps here
   end,
-  lsp = {},                 -- escape hatch: passed verbatim to vim.lsp.config()
+  web_port = nil,                       -- port for `tracey web` (nil = let tracey choose)
+  lsp = {},                             -- escape hatch: passed verbatim to vim.lsp.config()
 })
 ```
 
@@ -52,6 +57,13 @@ require('tracey').setup({
 | `:Tracey stop` | Stop all active clients |
 | `:Tracey restart` | Restart all active clients |
 | `:Tracey log` | Open the LSP log file |
+| `:Tracey status` | Show coverage overview |
+| `:Tracey uncovered` | List rules without implementation references |
+| `:Tracey untested` | List rules without verification references |
+| `:Tracey stale` | List stale references |
+| `:Tracey web` | Start the tracey web dashboard in the background |
+
+Query results (`status`, `uncovered`, `untested`, `stale`) open in a read-only scratch buffer. Press `q` to close.
 
 ## Health
 
