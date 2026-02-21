@@ -1,0 +1,12 @@
+project {
+  name "example-project"
+  root "../.."
+
+  specs {
+    glob "specs/**/*.md"
+  }
+
+  sources {
+    glob "src/**/*.rs"
+  }
+}
