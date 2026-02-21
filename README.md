@@ -15,6 +15,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
   'eikopf/tracey.nvim',
+  version = '*', -- pin to latest tagged release
   opts = {},
 }
 ```
