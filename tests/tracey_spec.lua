@@ -160,7 +160,7 @@ io.write('\n--- CLI parse_rule_locations ---\n')
 do
   local cli = require('tracey.cli')
 
-  -- Basic output with "Defined in:" and list entries
+  -- Only "Defined in:" lines are extracted; implementation references are ignored
   local output = table.concat({
     'Rule: auth.login',
     'Defined in: spec/auth.md:10',
@@ -169,12 +169,9 @@ do
     '  - src/auth.rs:100',
   }, '\n')
   local entries = cli._parse_rule_locations(output, '/project')
-  assert_eq(#entries, 3, 'parses all location lines')
+  assert_eq(#entries, 1, 'parses only the Defined in line')
   assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path for Defined in')
   assert_eq(entries[1].lnum, 10, 'parses line number for Defined in')
-  assert_eq(entries[2].filename, '/project/src/auth.rs', 'resolves relative path for list entry')
-  assert_eq(entries[2].lnum, 42, 'parses line number for list entry')
-  assert_eq(entries[3].lnum, 100, 'parses second list entry line number')
 
   -- Absolute paths should not be prefixed
   local abs_output = 'Defined in: /absolute/path/file.rs:5'

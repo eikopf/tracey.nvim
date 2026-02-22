@@ -155,8 +155,9 @@ local function parse_all_requirement_ids(lines)
 end
 M._parse_all_requirement_ids = parse_all_requirement_ids
 
---- Parse locations from `tracey query rule` output.
---- Matches "Defined in: <file>:<line>" and "  - <file>:<line>" patterns.
+--- Parse the definition location from `tracey query rule` output.
+--- Matches only "Defined in: <file>:<line>" (the spec item itself),
+--- ignoring implementation references listed under "References:".
 ---@param rule_output string
 ---@param root string|nil  Project root for resolving relative paths
 ---@return {filename: string, lnum: integer}[]
@@ -165,10 +166,6 @@ local function parse_rule_locations(rule_output, root)
   for line in rule_output:gmatch('[^\n]+') do
     -- Match "Defined in: path/to/file.rs:42"
     local file, lnum = line:match('^Defined in: (.+):(%d+)$')
-    if not file then
-      -- Match "  - path/to/file.rs:42"
-      file, lnum = line:match('^  %- (.+):(%d+)$')
-    end
     if file and lnum then
       if root and not file:match('^/') then
         file = root .. '/' .. file
