@@ -35,8 +35,7 @@ require('tracey').setup({
   enable = true,                        -- auto-call vim.lsp.enable('tracey') (default: true)
   cmd = { 'tracey', 'lsp' },           -- LSP server command
   filetypes = {                         -- filetypes to attach to
-    'css', 'go', 'javascript', 'markdown',
-    'python', 'rust', 'typescript', 'typescriptreact',
+    'markdown', 'rust',
   },
   root_dir = function(bufnr, cb)              -- root directory override
     -- custom root detection logic; call cb(root_path) when found

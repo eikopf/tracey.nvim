@@ -1,14 +1,8 @@
 return {
   cmd = { 'tracey', 'lsp' },
   filetypes = {
-    'css',
-    'go',
-    'javascript',
     'markdown',
-    'python',
     'rust',
-    'typescript',
-    'typescriptreact',
   },
   root_dir = function(bufnr, cb)
     local markers = { '.config/tracey/config.styx', '.tracey' }
