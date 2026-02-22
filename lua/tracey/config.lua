@@ -10,6 +10,7 @@ local M = {}
 ---@field exit_timeout? integer|false Timeout in ms before SIGTERM on exit (default 500, false to disable)
 ---@field web_port? integer Port for `tracey web` (omitted if nil, letting tracey choose)
 ---@field query_layout? tracey.QueryLayout|fun(title: string, line_count: integer): tracey.QueryLayout? Layout options for query scratch buffers
+---@field open_quickfix? fun() Called after populating the quickfix list (default: vim.cmd('copen'))
 ---@field lsp? table Escape hatch: passed verbatim to vim.lsp.config()
 
 ---@class tracey.QueryLayout

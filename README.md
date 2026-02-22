@@ -55,6 +55,8 @@ require('tracey').setup({
   -- query_layout = function(title, line_count)
   --   return { split = 'botright new', height = math.min(line_count + 1, 20) }
   -- end,
+  open_quickfix = nil,                  -- called after :Tracey quickfix populates the list
+                                        -- (default: vim.cmd('copen'); see "Alternative quickfix UIs")
   lsp = {},                             -- escape hatch: passed verbatim to vim.lsp.config()
 })
 ```
@@ -79,6 +81,20 @@ require('tracey').setup({
 Query results (`status`, `uncovered`, `untested`, `stale`) open in a read-only scratch buffer. Press `q` to close, or `<CR>` on a requirement line to jump to its spec definition (results go to the location list for `:lnext` / `:lprev` navigation).
 
 `:Tracey quickfix` accepts `uncovered`, `untested`, or `stale` as a filter and resolves each requirement to its file:line location in the quickfix list. Navigate with `:cnext` / `:cprev`.
+
+### Alternative quickfix UIs
+
+By default, `:Tracey quickfix` opens the built-in quickfix window. If you use [trouble.nvim](https://github.com/folke/trouble.nvim) or another quickfix UI, set the `open_quickfix` option:
+
+```lua
+require('tracey').setup({
+  open_quickfix = function()
+    require('trouble').open('qflist')
+  end,
+})
+```
+
+The quickfix list is always populated via `vim.fn.setqflist()`, so any plugin that reads the quickfix list will work — only the "open" step is customized.
 
 ## Health
 

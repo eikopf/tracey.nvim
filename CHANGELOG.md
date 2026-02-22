@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `open_quickfix` config option to customize how the quickfix list is displayed
+  after `:Tracey quickfix`. Defaults to the built-in `:copen`. Enables
+  integration with alternative quickfix UIs like trouble.nvim.
+
 ## [0.4.0] - 2026-02-22
 
 ### Added

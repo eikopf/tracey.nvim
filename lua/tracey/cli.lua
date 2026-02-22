@@ -261,7 +261,9 @@ function M.query_quickfix(subcmd)
           end)
 
           vim.fn.setqflist(all_entries, 'r')
-          vim.cmd('copen')
+          local open = require('tracey.config').get().open_quickfix
+            or function() vim.cmd('copen') end
+          open()
 
           local msg = string.format('tracey quickfix %s: %d entries', subcmd, #all_entries)
           if failures > 0 then

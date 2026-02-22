@@ -13,7 +13,8 @@ CONTENTS                                                     *tracey-contents*
   4. Configuration ............................ |tracey-configuration|
   5. Commands ................................. |tracey-commands|
   6. Lua API .................................. |tracey-api|
-  7. Health check ............................. |tracey-health|
+  7. Alternative quickfix UIs ................. |tracey-trouble|
+  8. Health check ............................. |tracey-health|
 
 ==============================================================================
 1. INTRODUCTION                                          *tracey-introduction*
@@ -93,6 +94,12 @@ Fields ~
                             behavior, which may leave orphaned processes).
   `web_port`      integer   Port for `tracey web`. When nil (the default), no
                             port is passed and tracey picks its own default.
+  `open_quickfix` function  Called after `:Tracey quickfix` populates the
+                            quickfix list. Signature: `fun()`.
+                            Default: opens the built-in quickfix window
+                            (equivalent to `:copen`).
+                            See |tracey-trouble| for an example using
+                            trouble.nvim as an alternative quickfix UI.
   `lsp`           table     Escape hatch: merged verbatim into vim.lsp.config().
 
 ==============================================================================
@@ -170,7 +177,39 @@ require('tracey').restart()
   Restart all tracey LSP clients. Re-enables after a short delay.
 
 ==============================================================================
-7. HEALTH CHECK                                              *tracey-health*
+7. ALTERNATIVE QUICKFIX UIs                                  *tracey-trouble*
+
+By default, `:Tracey quickfix` opens the built-in quickfix window. If you
+use an alternative quickfix UI such as trouble.nvim, you can override the
+`open_quickfix` option to open it instead.
+
+The quickfix list is always populated via `vim.fn.setqflist()` regardless of
+this option, so any plugin that reads the quickfix list will work.
+
+trouble.nvim ~
+                                                     *tracey-trouble-example*
+>lua
+  require('tracey').setup({
+    open_quickfix = function()
+      -- requires folke/trouble.nvim
+      require('trouble').open('qflist')
+    end,
+  })
+<
+
+Other quickfix UIs ~
+
+Any function that displays the quickfix list can be used: >lua
+  require('tracey').setup({
+    open_quickfix = function()
+      -- use any quickfix viewer you prefer
+      vim.cmd('copen')
+    end,
+  })
+<
+
+==============================================================================
+8. HEALTH CHECK                                              *tracey-health*
 
 Run `:checkhealth tracey` to verify your setup. The health check reports:
 
