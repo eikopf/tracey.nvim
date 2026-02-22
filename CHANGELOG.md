@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-22
+
 ### Changed
 - Replace `root_markers` with `root_dir` function for nested path support
   - `root_markers` only matches filenames directly inside ancestor directories, so paths like `.config/tracey/config.styx` don't work
@@ -47,6 +49,7 @@ Initial release of tracey.nvim.
 - Full vimdoc documentation (`doc/tracey.txt`)
 - Example Rust project for interactive testing
 
-[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/bearcove/tracey.nvim/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bearcove/tracey.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bearcove/tracey.nvim/releases/tag/v0.1.0
