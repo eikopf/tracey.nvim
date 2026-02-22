@@ -190,4 +190,6 @@ io.write(string.format('\n=== %d passed, %d failed ===\n', pass, fail))
 
 if fail > 0 then
   vim.cmd('cquit 1')
+else
+  vim.cmd('qall!')
 end
