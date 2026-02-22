@@ -9,7 +9,13 @@ local M = {}
 ---@field on_attach? fun(client: vim.lsp.Client, bufnr: integer) Callback on attach
 ---@field exit_timeout? integer|false Timeout in ms before SIGTERM on exit (default 500, false to disable)
 ---@field web_port? integer Port for `tracey web` (omitted if nil, letting tracey choose)
+---@field query_layout? tracey.QueryLayout|fun(title: string, line_count: integer): tracey.QueryLayout? Layout options for query scratch buffers
 ---@field lsp? table Escape hatch: passed verbatim to vim.lsp.config()
+
+---@class tracey.QueryLayout
+---@field split? string Vim command to create the split (default "botright new")
+---@field height? integer Window height after creation
+---@field width? integer Window width after creation
 
 ---@type tracey.Config
 local defaults = {

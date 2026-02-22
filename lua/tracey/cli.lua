@@ -8,53 +8,59 @@ M._web_job = nil
 ---@param line string
 ---@return string|nil
 local function parse_requirement_id(line)
-  return line:match('^  %- (.+)$')
+  return line:match('^  %- (%S+)')
 end
 M._parse_requirement_id = parse_requirement_id
 
---- Jump to a requirement definition via the tracey LSP's workspace/symbol.
+--- Jump to a requirement's spec definition by searching for its r[id] annotation.
 ---@param req_id string
 local function jump_to_requirement(req_id)
-  local clients = require('tracey').get_clients()
-  if #clients == 0 then
-    vim.notify('tracey: no active LSP client', vim.log.levels.WARN)
+  local root = require('tracey.cli').find_root()
+  if not root then
+    vim.notify('tracey: could not determine project root', vim.log.levels.WARN)
     return
   end
 
-  local client = clients[1]
-  local win = vim.api.nvim_get_current_win()
+  -- Find a non-scratch window to navigate in
+  local scratch_win = vim.api.nvim_get_current_win()
+  local target_win
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if win ~= scratch_win and vim.bo[vim.api.nvim_win_get_buf(win)].buftype == '' then
+      target_win = win
+      break
+    end
+  end
 
-  client:request('workspace/symbol', { query = req_id }, function(err, result)
-    vim.schedule(function()
-      if err then
-        vim.notify('tracey: workspace/symbol error: ' .. tostring(err), vim.log.levels.ERROR)
-        return
-      end
-
-      if not result or #result == 0 then
-        vim.notify('tracey: no symbols found for ' .. req_id, vim.log.levels.WARN)
+  -- Search for the spec annotation r[req_id] in markdown files
+  vim.system(
+    { 'grep', '-rn', '--include=*.md', '-F', 'r[' .. req_id .. ']', root },
+    { text = true },
+    vim.schedule_wrap(function(result)
+      if result.code ~= 0 or not result.stdout or result.stdout == '' then
+        vim.notify('tracey: no definition found for ' .. req_id, vim.log.levels.WARN)
         return
       end
 
       local entries = {}
-      for _, sym in ipairs(result) do
-        local loc = sym.location
-        if loc then
-          local uri = loc.uri or loc.targetUri
-          local range = loc.range or loc.targetSelectionRange
-          if uri and range then
-            table.insert(entries, {
-              filename = vim.uri_to_fname(uri),
-              lnum = range.start.line + 1,
-              col = range.start.character + 1,
-              text = sym.name or req_id,
-            })
-          end
+      for line in result.stdout:gmatch('[^\n]+') do
+        local file, lnum, text = line:match('^(.+):(%d+):(.*)$')
+        if file and lnum then
+          table.insert(entries, {
+            filename = file,
+            lnum = tonumber(lnum),
+            col = 1,
+            text = vim.trim(text),
+          })
         end
       end
 
       if #entries == 0 then
-        vim.notify('tracey: no locations found for ' .. req_id, vim.log.levels.WARN)
+        vim.notify('tracey: no definition found for ' .. req_id, vim.log.levels.WARN)
+        return
+      end
+
+      local win = target_win and vim.api.nvim_win_is_valid(target_win) and target_win or scratch_win
+      if not vim.api.nvim_win_is_valid(win) then
         return
       end
 
@@ -62,7 +68,7 @@ local function jump_to_requirement(req_id)
       vim.api.nvim_set_current_win(win)
       vim.cmd('lfirst')
     end)
-  end)
+  )
 end
 
 --- Get the project root from the active tracey LSP client, falling back to
@@ -91,8 +97,24 @@ end
 ---@param lines string[]
 ---@param title string
 local function open_scratch(lines, title)
-  vim.cmd('botright new')
+  local layout = {}
+  local query_layout = require('tracey.config').get().query_layout
+  if type(query_layout) == 'function' then
+    layout = query_layout(title, #lines) or {}
+  elseif type(query_layout) == 'table' then
+    layout = query_layout
+  end
+
+  vim.cmd(layout.split or 'botright new')
   local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
+  if layout.height then
+    vim.api.nvim_win_set_height(win, layout.height)
+  end
+  if layout.width then
+    vim.api.nvim_win_set_width(win, layout.width)
+  end
+
   vim.bo[buf].buftype = 'nofile'
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].swapfile = false
