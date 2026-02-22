@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   after `:Tracey quickfix`. Defaults to the built-in `:copen`. Enables
   integration with alternative quickfix UIs like trouble.nvim.
 
+### Changed
+- Use only `.config/tracey/config.styx` as root marker, drop `.tracey` directory
+- Remove unsupported languages from LSP filetypes (keep only Rust and Markdown)
+
+### Fixed
+- Limit `query_quickfix` concurrency to 20 to avoid EMFILE ("too many open
+  files") on large projects
+
 ## [0.4.0] - 2026-02-22
 
 ### Added
