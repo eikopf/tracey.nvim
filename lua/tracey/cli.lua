@@ -178,7 +178,7 @@ end
 M._parse_all_requirement_ids = parse_all_requirement_ids
 
 --- Parse definition locations from `tracey query rule` output (single or batched).
---- Tracks "Rule: <id>" headers to associate each "Defined in:" with its requirement.
+--- Tracks "# <id>" markdown headings to associate each "Defined in:" with its requirement.
 --- Matches only "Defined in: <file>:<line>" (the spec item itself),
 --- ignoring implementation references listed under "References:".
 ---@param rule_output string
@@ -188,7 +188,7 @@ local function parse_rule_locations(rule_output, root)
   local entries = {}
   local current_id = nil
   for line in rule_output:gmatch('[^\n]+') do
-    local id = line:match('^Rule: (%S+)')
+    local id = line:match('^# (%S+)')
     if id then
       current_id = id
     end

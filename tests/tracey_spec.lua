@@ -162,9 +162,15 @@ do
 
   -- Only "Defined in:" lines are extracted; implementation references are ignored
   local output = table.concat({
-    'Rule: auth.login',
+    '# auth.login',
+    '',
+    'Users must be able to log in with a username and password.',
+    '',
     'Defined in: spec/auth.md:10',
-    'References:',
+    '',
+    '',
+    '## example-spec/rust',
+    'Impl references:',
     '  - src/auth.rs:42',
     '  - src/auth.rs:100',
   }, '\n')
@@ -172,27 +178,41 @@ do
   assert_eq(#entries, 1, 'parses only the Defined in line')
   assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path for Defined in')
   assert_eq(entries[1].lnum, 10, 'parses line number for Defined in')
-  assert_eq(entries[1].text, 'auth.login', 'extracts rule ID from Rule: header')
+  assert_eq(entries[1].text, 'auth.login', 'extracts rule ID from heading')
 
   -- Absolute paths should not be prefixed
-  local abs_output = 'Rule: abs.rule\nDefined in: /absolute/path/file.rs:5'
+  local abs_output = '# abs.rule\n\nDefined in: /absolute/path/file.rs:5'
   local abs_entries = cli._parse_rule_locations(abs_output, '/project')
   assert_eq(abs_entries[1].filename, '/absolute/path/file.rs', 'absolute path not prefixed')
 
   -- Nil root should leave relative paths as-is
-  local nil_root_entries = cli._parse_rule_locations('Rule: rel.rule\nDefined in: relative/file.rs:1', nil)
+  local nil_root_entries = cli._parse_rule_locations('# rel.rule\n\nDefined in: relative/file.rs:1', nil)
   assert_eq(nil_root_entries[1].filename, 'relative/file.rs', 'nil root leaves relative path')
 
   -- Batched output: multiple rules in a single response
   local batched = table.concat({
-    'Rule: auth.login',
+    '# auth.login',
+    '',
+    'Users must be able to log in.',
+    '',
     'Defined in: spec/auth.md:10',
-    'References:',
+    '',
+    '',
+    '## example-spec/rust',
+    'Impl references:',
     '  - src/auth.rs:42',
     '',
-    'Rule: auth.logout',
+    '---',
+    '',
+    '# auth.logout',
+    '',
+    'Users must be able to log out.',
+    '',
     'Defined in: spec/auth.md:25',
-    'References:',
+    '',
+    '',
+    '## example-spec/rust',
+    'Impl references:',
     '  - src/auth.rs:80',
   }, '\n')
   local batched_entries = cli._parse_rule_locations(batched, '/project')
