@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-22
+
 ### Added
-- `<CR>` in query scratch buffers jumps to requirement definition via LSP
-  `workspace/symbol`, populating the location list for multi-match navigation
+- `<CR>` in query scratch buffers jumps to requirement's spec definition,
+  searching for `r[id]` annotations in markdown files. Results populate the
+  location list for multi-match navigation with `:lnext` / `:lprev` (#4)
 - `:Tracey quickfix <filter>` subcommand to populate the quickfix list with
-  resolved file:line locations for `uncovered`, `untested`, or `stale` requirements
+  resolved file:line locations for `uncovered`, `untested`, or `stale`
+  requirements via `tracey query rule` lookups (#5)
+- `query_layout` config option to control scratch buffer split and dimensions,
+  accepted as a static table or a function `(title, line_count) -> layout`
 
 ## [0.3.0] - 2026-02-22
 
@@ -55,7 +61,8 @@ Initial release of tracey.nvim.
 - Full vimdoc documentation (`doc/tracey.txt`)
 - Example Rust project for interactive testing
 
-[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/bearcove/tracey.nvim/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/bearcove/tracey.nvim/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bearcove/tracey.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bearcove/tracey.nvim/releases/tag/v0.1.0

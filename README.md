@@ -46,6 +46,15 @@ require('tracey').setup({
     -- your keymaps here
   end,
   web_port = nil,                       -- port for `tracey web` (nil = let tracey choose)
+  query_layout = {                      -- layout for query scratch buffers
+    split = 'botright new',             -- vim split command (default: 'botright new')
+    height = nil,                       -- window height (nil = auto)
+    width = nil,                        -- window width (nil = auto)
+  },
+  -- query_layout can also be a function:
+  -- query_layout = function(title, line_count)
+  --   return { split = 'botright new', height = math.min(line_count + 1, 20) }
+  -- end,
   lsp = {},                             -- escape hatch: passed verbatim to vim.lsp.config()
 })
 ```
@@ -65,8 +74,11 @@ require('tracey').setup({
 | `:Tracey untested` | List rules without verification references |
 | `:Tracey stale` | List stale references |
 | `:Tracey web` | Start the tracey web dashboard in the background |
+| `:Tracey quickfix <filter>` | Populate the quickfix list with requirement locations |
 
-Query results (`status`, `uncovered`, `untested`, `stale`) open in a read-only scratch buffer. Press `q` to close.
+Query results (`status`, `uncovered`, `untested`, `stale`) open in a read-only scratch buffer. Press `q` to close, or `<CR>` on a requirement line to jump to its spec definition (results go to the location list for `:lnext` / `:lprev` navigation).
+
+`:Tracey quickfix` accepts `uncovered`, `untested`, or `stale` as a filter and resolves each requirement to its file:line location in the quickfix list. Navigate with `:cnext` / `:cprev`.
 
 ## Health
 
