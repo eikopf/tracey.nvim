@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - `<CR>` in query scratch buffers jumps to requirement definition via LSP
   `workspace/symbol`, populating the location list for multi-match navigation
+- `:Tracey quickfix <filter>` subcommand to populate the quickfix list with
+  resolved file:line locations for `uncovered`, `untested`, or `stale` requirements
 
 ## [0.3.0] - 2026-02-22
 

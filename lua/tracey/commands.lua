@@ -1,6 +1,8 @@
 local M = {}
 
----@type table<string, fun()>
+local quickfix_filters = { 'uncovered', 'untested', 'stale' }
+
+---@type table<string, fun(args: { args: string, fargs: string[] })>
 local subcommands = {
   info = function()
     local tracey = require('tracey')
@@ -72,6 +74,18 @@ local subcommands = {
   web = function()
     require('tracey.cli').web()
   end,
+
+  quickfix = function(args)
+    local filter = args.fargs[2]
+    if not filter or not vim.tbl_contains(quickfix_filters, filter) then
+      vim.notify(
+        'tracey: quickfix requires a filter: ' .. table.concat(quickfix_filters, ', '),
+        vim.log.levels.ERROR
+      )
+      return
+    end
+    require('tracey.cli').query_quickfix(filter)
+  end,
 }
 
 local sorted_names = vim.tbl_keys(subcommands)
@@ -90,14 +104,23 @@ function M.run(args)
     vim.notify('tracey: unknown command "' .. name .. '"', vim.log.levels.ERROR)
     return
   end
-  cmd()
+  cmd(args)
 end
 
 ---@param arg_lead string
----@param _cmdline string
+---@param cmdline string
 ---@param _cursor_pos integer
 ---@return string[]
-function M.complete(arg_lead, _cmdline, _cursor_pos)
+function M.complete(arg_lead, cmdline, _cursor_pos)
+  -- Strip arg_lead to get the prefix, then split to determine which argument position
+  local prefix = cmdline:sub(1, #cmdline - #arg_lead)
+  local parts = vim.split(vim.trim(prefix), '%s+')
+  -- parts[1] is "Tracey"; if parts[2] is "quickfix", complete the filter
+  if #parts >= 2 and parts[2] == 'quickfix' then
+    return vim.tbl_filter(function(name)
+      return name:find(arg_lead, 1, true) == 1
+    end, quickfix_filters)
+  end
   return vim.tbl_filter(function(name)
     return name:find(arg_lead, 1, true) == 1
   end, sorted_names)

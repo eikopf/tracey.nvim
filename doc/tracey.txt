@@ -120,6 +120,9 @@ Subcommands ~
   `stale`         Run `tracey query stale` to list stale references.
   `web`           Start the tracey web dashboard in the background.
                   Uses `web_port` from config if set (see |tracey.Config|).
+  `quickfix`      Populate the quickfix list with file locations for
+                  requirements matching a filter. Requires a second argument:
+                  `uncovered`, `untested`, or `stale`. See |:Tracey-quickfix|.
 
 Query results open in a read-only scratch buffer. Press `q` to close.
 Press `<CR>` on a requirement line to jump to its definition via the LSP.
@@ -127,6 +130,23 @@ Results are placed in the location list, so |:lnext| and |:lprev| navigate
 between multiple matches.
 
 Tab completion is supported for all subcommands.
+
+                                                         *:Tracey-quickfix*
+:Tracey quickfix {filter}
+
+  Resolve all requirement IDs from the given query to file:line locations
+  and populate the quickfix list. Use |:cnext| / |:cprev| to navigate.
+
+  {filter} is required and must be one of:
+    `uncovered`   Requirements without implementation references.
+    `untested`    Requirements without verification references.
+    `stale`       Requirements with stale references.
+
+  Examples: >
+    :Tracey quickfix uncovered
+    :Tracey quickfix untested
+    :Tracey quickfix stale
+<
 
 ==============================================================================
 6. LUA API                                                    *tracey-api*

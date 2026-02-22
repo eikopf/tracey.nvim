@@ -66,7 +66,8 @@ do
 
   local all = commands.complete('', '', 0)
   table.sort(all)
-  assert_truthy(#all >= 10, 'completion returns all subcommands (got ' .. #all .. ')')
+  assert_truthy(#all >= 11, 'completion returns all subcommands (got ' .. #all .. ')')
+  assert_truthy(vim.tbl_contains(all, 'quickfix'), 'completion includes quickfix')
   assert_truthy(vim.tbl_contains(all, 'info'), 'completion includes info')
   assert_truthy(vim.tbl_contains(all, 'status'), 'completion includes status')
   assert_truthy(vim.tbl_contains(all, 'web'), 'completion includes web')
@@ -84,6 +85,15 @@ do
 
   local none = commands.complete('xyz', '', 0)
   assert_eq(none, {}, 'unknown prefix returns empty')
+
+  -- Second-arg completion for quickfix
+  local qf_all = commands.complete('', 'Tracey quickfix ', 0)
+  table.sort(qf_all)
+  assert_eq(qf_all, { 'stale', 'uncovered', 'untested' }, 'quickfix completes filter options')
+
+  local qf_prefix = commands.complete('un', 'Tracey quickfix un', 0)
+  table.sort(qf_prefix)
+  assert_eq(qf_prefix, { 'uncovered', 'untested' }, 'quickfix prefix "un" matches uncovered/untested')
 end
 
 -- ============================================================================
@@ -119,6 +129,61 @@ do
   assert_eq(cli._parse_requirement_id('Summary: 5 rules'), nil, 'summary line does not match')
   assert_eq(cli._parse_requirement_id('- auth.login'), nil, 'wrong indentation does not match')
   assert_eq(cli._parse_requirement_id('    - auth.login'), nil, 'four-space indent does not match')
+end
+
+-- ============================================================================
+-- CLI parse_all_requirement_ids tests
+-- ============================================================================
+io.write('\n--- CLI parse_all_requirement_ids ---\n')
+
+do
+  local cli = require('tracey.cli')
+
+  local lines = {
+    '# Uncovered requirements',
+    '',
+    '  - auth.login',
+    '  - auth.logout',
+    '',
+    'Summary: 2 rules',
+  }
+  assert_eq(cli._parse_all_requirement_ids(lines), { 'auth.login', 'auth.logout' }, 'extracts IDs from mixed output')
+  assert_eq(cli._parse_all_requirement_ids({}), {}, 'empty input returns empty list')
+  assert_eq(cli._parse_all_requirement_ids({ '# Nothing here' }), {}, 'no matches returns empty list')
+end
+
+-- ============================================================================
+-- CLI parse_rule_locations tests
+-- ============================================================================
+io.write('\n--- CLI parse_rule_locations ---\n')
+
+do
+  local cli = require('tracey.cli')
+
+  -- Basic output with "Defined in:" and list entries
+  local output = table.concat({
+    'Rule: auth.login',
+    'Defined in: spec/auth.md:10',
+    'References:',
+    '  - src/auth.rs:42',
+    '  - src/auth.rs:100',
+  }, '\n')
+  local entries = cli._parse_rule_locations(output, '/project')
+  assert_eq(#entries, 3, 'parses all location lines')
+  assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path for Defined in')
+  assert_eq(entries[1].lnum, 10, 'parses line number for Defined in')
+  assert_eq(entries[2].filename, '/project/src/auth.rs', 'resolves relative path for list entry')
+  assert_eq(entries[2].lnum, 42, 'parses line number for list entry')
+  assert_eq(entries[3].lnum, 100, 'parses second list entry line number')
+
+  -- Absolute paths should not be prefixed
+  local abs_output = 'Defined in: /absolute/path/file.rs:5'
+  local abs_entries = cli._parse_rule_locations(abs_output, '/project')
+  assert_eq(abs_entries[1].filename, '/absolute/path/file.rs', 'absolute path not prefixed')
+
+  -- Nil root should leave relative paths as-is
+  local nil_root_entries = cli._parse_rule_locations('Defined in: relative/file.rs:1', nil)
+  assert_eq(nil_root_entries[1].filename, 'relative/file.rs', 'nil root leaves relative path')
 end
 
 -- ============================================================================
