@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Use batched `tracey query rule id1 id2 ...` for quickfix population instead
+  of spawning one subprocess per requirement
+
+### Fixed
+- Fix tests hanging on success in fish shell (explicit `qall!` from Lua)
+
 ## [0.5.0] - 2026-02-22
 
 ### Added
