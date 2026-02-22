@@ -17,6 +17,11 @@ nvim --headless -u NONE --cmd "set rtp+=." -c "lua dofile('tests/tracey_spec.lua
 
 Tests are self-contained (no test framework dependency). They run in headless Neovim with a minimal assert helper. Exit code 1 on failure.
 
+**WARNING: Testing can hang.** You MUST use the exact command above. Specifically:
+- `-u NONE` is required — without it, the user's Neovim config may call `setup()`, which enables the LSP. tracey's LSP shutdown handler is a no-op, so `exit_timeout` causes Neovim to hang waiting for a process that won't exit cleanly.
+- Do NOT write test code that calls `require('tracey').setup()` or `vim.lsp.enable('tracey')`. The LSP must not start during tests.
+- Do NOT run arbitrary `nvim` commands against this repo without `-u NONE`. The `lsp/tracey.lua` config is auto-discovered when the plugin is on the runtimepath, and any `vim.lsp.enable()` call will start `tracey lsp`, which can prevent Neovim from exiting.
+
 **Generate vim help tags:**
 ```sh
 nvim --headless -c "helptags doc/" -c "qall!"
