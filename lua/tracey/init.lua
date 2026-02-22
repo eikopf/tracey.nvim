@@ -23,6 +23,9 @@ function M.setup(opts)
   if cfg.on_attach then
     overrides.on_attach = cfg.on_attach
   end
+  if cfg.exit_timeout ~= nil then
+    overrides.exit_timeout = cfg.exit_timeout
+  end
 
   -- Escape hatch: merge any raw lsp config the user provided
   if cfg.lsp then
