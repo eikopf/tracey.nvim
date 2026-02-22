@@ -5,7 +5,7 @@ return {
     'rust',
   },
   root_dir = function(bufnr, cb)
-    local markers = { '.config/tracey/config.styx', '.tracey' }
+    local markers = { '.config/tracey/config.styx' }
     local path = vim.api.nvim_buf_get_name(bufnr)
     for dir in vim.fs.parents(path) do
       for _, marker in ipairs(markers) do

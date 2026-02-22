@@ -6,7 +6,7 @@ Neovim plugin for [tracey](https://github.com/bearcove/tracey), a spec coverage 
 
 - Neovim >= 0.11
 - [tracey](https://github.com/bearcove/tracey) installed and in your `PATH`
-- A tracey project (detected via `.config/tracey/config.styx` or `.tracey` directory)
+- A tracey project (detected via `.config/tracey/config.styx`)
 
 ## Installation
 
