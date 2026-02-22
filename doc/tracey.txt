@@ -72,6 +72,13 @@ optional.
     end,
     exit_timeout = 500,       -- ms before SIGTERM on exit (false = disable)
     web_port = nil,           -- port for `tracey web` (nil = let tracey choose)
+    query_layout = {          -- layout for query scratch buffers
+      split = 'botright new', -- vim split command (default: 'botright new')
+      height = nil,           -- window height (nil = auto)
+      width = nil,            -- window width (nil = auto)
+    },
+    open_quickfix = nil,      -- called after :Tracey quickfix populates the list
+                              -- (default: vim.cmd('copen'); see |tracey-trouble|)
     lsp = {},                 -- escape hatch: passed verbatim to vim.lsp.config()
   })
 <
@@ -94,6 +101,10 @@ Fields ~
                             behavior, which may leave orphaned processes).
   `web_port`      integer   Port for `tracey web`. When nil (the default), no
                             port is passed and tracey picks its own default.
+  `query_layout`  table|    Layout for query scratch buffers. As a table,
+                  function  accepts `split` (vim command), `height`, and
+                            `width` fields. As a function, receives
+                            `(title, line_count)` and returns a layout table.
   `open_quickfix` function  Called after `:Tracey quickfix` populates the
                             quickfix list. Signature: `fun()`.
                             Default: opens the built-in quickfix window

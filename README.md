@@ -6,7 +6,7 @@ Neovim plugin for [tracey](https://github.com/bearcove/tracey), a spec coverage 
 
 - Neovim >= 0.11
 - [tracey](https://github.com/bearcove/tracey) installed and in your `PATH`
-- A tracey project (detected via `.tracey` directory or `Cargo.toml`)
+- A tracey project (detected via `.config/tracey/config.styx` or `.tracey` directory)
 
 ## Installation
 
@@ -45,6 +45,7 @@ require('tracey').setup({
   on_attach = function(client, bufnr)
     -- your keymaps here
   end,
+  exit_timeout = 500,                    -- ms before SIGTERM on exit (false = disable)
   web_port = nil,                       -- port for `tracey web` (nil = let tracey choose)
   query_layout = {                      -- layout for query scratch buffers
     split = 'botright new',             -- vim split command (default: 'botright new')
