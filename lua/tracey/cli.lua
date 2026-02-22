@@ -162,6 +162,118 @@ function M.query(subcmd)
   end))
 end
 
+--- Extract all requirement IDs from query output lines.
+---@param lines string[]
+---@return string[]
+local function parse_all_requirement_ids(lines)
+  local ids = {}
+  for _, line in ipairs(lines) do
+    local id = parse_requirement_id(line)
+    if id then
+      table.insert(ids, id)
+    end
+  end
+  return ids
+end
+M._parse_all_requirement_ids = parse_all_requirement_ids
+
+--- Parse the definition location from `tracey query rule` output.
+--- Matches only "Defined in: <file>:<line>" (the spec item itself),
+--- ignoring implementation references listed under "References:".
+---@param rule_output string
+---@param root string|nil  Project root for resolving relative paths
+---@return {filename: string, lnum: integer}[]
+local function parse_rule_locations(rule_output, root)
+  local entries = {}
+  for line in rule_output:gmatch('[^\n]+') do
+    -- Match "Defined in: path/to/file.rs:42"
+    local file, lnum = line:match('^Defined in: (.+):(%d+)$')
+    if file and lnum then
+      if root and not file:match('^/') then
+        file = root .. '/' .. file
+      end
+      table.insert(entries, { filename = file, lnum = tonumber(lnum) })
+    end
+  end
+  return entries
+end
+M._parse_rule_locations = parse_rule_locations
+
+--- Run a tracey query and populate the quickfix list with resolved locations.
+---@param subcmd string  One of "uncovered", "untested", "stale"
+function M.query_quickfix(subcmd)
+  local root = M.find_root()
+  local cmd = { 'tracey', 'query' }
+  if root then
+    table.insert(cmd, root)
+  end
+  table.insert(cmd, subcmd)
+
+  vim.notify('tracey: running quickfix query ' .. subcmd .. '...', vim.log.levels.INFO)
+
+  vim.system(cmd, { text = true }, vim.schedule_wrap(function(result)
+    if result.code ~= 0 then
+      local msg = result.stderr and vim.trim(result.stderr) or ('exit code ' .. result.code)
+      vim.notify('tracey quickfix ' .. subcmd .. ': ' .. msg, vim.log.levels.ERROR)
+      return
+    end
+
+    local output = result.stdout or ''
+    local lines = vim.split(output, '\n', { trimempty = true })
+    local ids = parse_all_requirement_ids(lines)
+
+    if #ids == 0 then
+      vim.notify('tracey quickfix ' .. subcmd .. ': no requirements found', vim.log.levels.INFO)
+      return
+    end
+
+    local all_entries = {}
+    local pending = #ids
+    local failures = 0
+
+    for _, id in ipairs(ids) do
+      local rule_cmd = { 'tracey', 'query' }
+      if root then
+        table.insert(rule_cmd, root)
+      end
+      table.insert(rule_cmd, 'rule')
+      table.insert(rule_cmd, id)
+
+      vim.system(rule_cmd, { text = true }, vim.schedule_wrap(function(rule_result)
+        if rule_result.code ~= 0 then
+          failures = failures + 1
+        else
+          local rule_output = rule_result.stdout or ''
+          local entries = parse_rule_locations(rule_output, root)
+          for _, entry in ipairs(entries) do
+            entry.text = id
+            table.insert(all_entries, entry)
+          end
+        end
+
+        pending = pending - 1
+        if pending == 0 then
+          table.sort(all_entries, function(a, b)
+            if a.filename ~= b.filename then
+              return a.filename < b.filename
+            end
+            return a.lnum < b.lnum
+          end)
+
+          vim.fn.setqflist(all_entries, 'r')
+          vim.cmd('copen')
+
+          local msg = string.format('tracey quickfix %s: %d entries', subcmd, #all_entries)
+          if failures > 0 then
+            msg = msg .. string.format(' (%d lookups failed)', failures)
+          end
+          vim.notify(msg, vim.log.levels.INFO)
+        end
+      end))
+    end
+  end))
+end
+
 --- Start the tracey web dashboard as a background job.
 function M.web()
   if M._web_job then
