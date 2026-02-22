@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-22
+
+### Fixed
+- Fix orphaned `tracey lsp` and `tracey web` processes on Neovim exit (#3)
+  - LSP: set `exit_timeout` (default 500ms) so Neovim waits for the shutdown handshake
+  - Web: kill the background `tracey web` job via `VimLeavePre` autocmd
+  - `exit_timeout` is configurable via `setup()` (set to `false` to disable)
+
+### Changed
+- Add version pinning to lazy.nvim install snippet in README
+
 ## [0.1.0] - 2026-02-21
 
 Initial release of tracey.nvim.
@@ -30,5 +41,6 @@ Initial release of tracey.nvim.
 - Full vimdoc documentation (`doc/tracey.txt`)
 - Example Rust project for interactive testing
 
-[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/bearcove/tracey.nvim/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/bearcove/tracey.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/bearcove/tracey.nvim/releases/tag/v0.1.0
