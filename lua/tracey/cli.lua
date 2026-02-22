@@ -3,6 +3,68 @@ local M = {}
 --- @type vim.SystemObj|nil
 M._web_job = nil
 
+--- Extract a requirement ID from a query result line.
+--- Matches lines like "  - auth.login" (two-space indent, dash, space, ID).
+---@param line string
+---@return string|nil
+local function parse_requirement_id(line)
+  return line:match('^  %- (.+)$')
+end
+M._parse_requirement_id = parse_requirement_id
+
+--- Jump to a requirement definition via the tracey LSP's workspace/symbol.
+---@param req_id string
+local function jump_to_requirement(req_id)
+  local clients = require('tracey').get_clients()
+  if #clients == 0 then
+    vim.notify('tracey: no active LSP client', vim.log.levels.WARN)
+    return
+  end
+
+  local client = clients[1]
+  local win = vim.api.nvim_get_current_win()
+
+  client:request('workspace/symbol', { query = req_id }, function(err, result)
+    vim.schedule(function()
+      if err then
+        vim.notify('tracey: workspace/symbol error: ' .. tostring(err), vim.log.levels.ERROR)
+        return
+      end
+
+      if not result or #result == 0 then
+        vim.notify('tracey: no symbols found for ' .. req_id, vim.log.levels.WARN)
+        return
+      end
+
+      local entries = {}
+      for _, sym in ipairs(result) do
+        local loc = sym.location
+        if loc then
+          local uri = loc.uri or loc.targetUri
+          local range = loc.range or loc.targetSelectionRange
+          if uri and range then
+            table.insert(entries, {
+              filename = vim.uri_to_fname(uri),
+              lnum = range.start.line + 1,
+              col = range.start.character + 1,
+              text = sym.name or req_id,
+            })
+          end
+        end
+      end
+
+      if #entries == 0 then
+        vim.notify('tracey: no locations found for ' .. req_id, vim.log.levels.WARN)
+        return
+      end
+
+      vim.fn.setloclist(win, entries, 'r')
+      vim.api.nvim_set_current_win(win)
+      vim.cmd('lfirst')
+    end)
+  end)
+end
+
 --- Get the project root from the active tracey LSP client, falling back to
 --- searching upward for a `.config/tracey` directory.
 ---@return string|nil
@@ -39,6 +101,13 @@ local function open_scratch(lines, title)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.keymap.set('n', 'q', '<cmd>bwipeout<CR>', { buffer = buf, silent = true })
+  vim.keymap.set('n', '<CR>', function()
+    local line = vim.api.nvim_get_current_line()
+    local req_id = parse_requirement_id(line)
+    if req_id then
+      jump_to_requirement(req_id)
+    end
+  end, { buffer = buf, silent = true })
 end
 
 --- Run `tracey query <subcmd>` asynchronously and display results in a scratch buffer.

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `<CR>` in query scratch buffers jumps to requirement definition via LSP
+  `workspace/symbol`, populating the location list for multi-match navigation
+
 ## [0.3.0] - 2026-02-22
 
 ### Changed
