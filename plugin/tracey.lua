@@ -12,3 +12,19 @@ end, {
   end,
   desc = 'tracey.nvim commands',
 })
+
+-- HACK: `tracey web` runs as a background job outside the LSP lifecycle, so
+-- Neovim's built-in LSP exit handler won't touch it. Kill it on exit to avoid
+-- orphaned processes. This can be removed once tracey web handles its parent
+-- process disappearing gracefully.
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  group = vim.api.nvim_create_augroup('tracey_cleanup', { clear = true }),
+  desc = 'tracey.nvim: kill background tracey web process on exit',
+  callback = function()
+    local ok, cli = pcall(require, 'tracey.cli')
+    if ok and cli._web_job then
+      cli._web_job:kill('sigterm')
+      cli._web_job = nil
+    end
+  end,
+})
