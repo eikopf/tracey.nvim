@@ -172,15 +172,37 @@ do
   assert_eq(#entries, 1, 'parses only the Defined in line')
   assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path for Defined in')
   assert_eq(entries[1].lnum, 10, 'parses line number for Defined in')
+  assert_eq(entries[1].text, 'auth.login', 'extracts rule ID from Rule: header')
 
   -- Absolute paths should not be prefixed
-  local abs_output = 'Defined in: /absolute/path/file.rs:5'
+  local abs_output = 'Rule: abs.rule\nDefined in: /absolute/path/file.rs:5'
   local abs_entries = cli._parse_rule_locations(abs_output, '/project')
   assert_eq(abs_entries[1].filename, '/absolute/path/file.rs', 'absolute path not prefixed')
 
   -- Nil root should leave relative paths as-is
-  local nil_root_entries = cli._parse_rule_locations('Defined in: relative/file.rs:1', nil)
+  local nil_root_entries = cli._parse_rule_locations('Rule: rel.rule\nDefined in: relative/file.rs:1', nil)
   assert_eq(nil_root_entries[1].filename, 'relative/file.rs', 'nil root leaves relative path')
+
+  -- Batched output: multiple rules in a single response
+  local batched = table.concat({
+    'Rule: auth.login',
+    'Defined in: spec/auth.md:10',
+    'References:',
+    '  - src/auth.rs:42',
+    '',
+    'Rule: auth.logout',
+    'Defined in: spec/auth.md:25',
+    'References:',
+    '  - src/auth.rs:80',
+  }, '\n')
+  local batched_entries = cli._parse_rule_locations(batched, '/project')
+  assert_eq(#batched_entries, 2, 'batched output parses both rules')
+  assert_eq(batched_entries[1].text, 'auth.login', 'batched: first entry has correct rule ID')
+  assert_eq(batched_entries[1].filename, '/project/spec/auth.md', 'batched: first entry filename')
+  assert_eq(batched_entries[1].lnum, 10, 'batched: first entry line number')
+  assert_eq(batched_entries[2].text, 'auth.logout', 'batched: second entry has correct rule ID')
+  assert_eq(batched_entries[2].filename, '/project/spec/auth.md', 'batched: second entry filename')
+  assert_eq(batched_entries[2].lnum, 25, 'batched: second entry line number')
 end
 
 -- ============================================================================

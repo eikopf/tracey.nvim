@@ -177,22 +177,28 @@ local function parse_all_requirement_ids(lines)
 end
 M._parse_all_requirement_ids = parse_all_requirement_ids
 
---- Parse the definition location from `tracey query rule` output.
+--- Parse definition locations from `tracey query rule` output (single or batched).
+--- Tracks "Rule: <id>" headers to associate each "Defined in:" with its requirement.
 --- Matches only "Defined in: <file>:<line>" (the spec item itself),
 --- ignoring implementation references listed under "References:".
 ---@param rule_output string
 ---@param root string|nil  Project root for resolving relative paths
----@return {filename: string, lnum: integer}[]
+---@return {filename: string, lnum: integer, text: string}[]
 local function parse_rule_locations(rule_output, root)
   local entries = {}
+  local current_id = nil
   for line in rule_output:gmatch('[^\n]+') do
+    local id = line:match('^Rule: (%S+)')
+    if id then
+      current_id = id
+    end
     -- Match "Defined in: path/to/file.rs:42"
     local file, lnum = line:match('^Defined in: (.+):(%d+)$')
     if file and lnum then
       if root and not file:match('^/') then
         file = root .. '/' .. file
       end
-      table.insert(entries, { filename = file, lnum = tonumber(lnum) })
+      table.insert(entries, { filename = file, lnum = tonumber(lnum), text = current_id or '' })
     end
   end
   return entries
@@ -227,71 +233,42 @@ function M.query_quickfix(subcmd)
       return
     end
 
-    -- Resolve each ID via `tracey query rule <id>`, limiting concurrency to
-    -- avoid "too many open files" on large projects. Ideally tracey would
-    -- support batched rule queries so we wouldn't need N subprocesses at all.
-    local max_concurrent = 20
-    local all_entries = {}
-    local total = #ids
-    local completed = 0
-    local failures = 0
-    local next_idx = 1
+    -- Resolve all IDs in a single batched `tracey query rule id1 id2 ...` call
+    local rule_cmd = { 'tracey', 'query' }
+    if root then
+      table.insert(rule_cmd, root)
+    end
+    table.insert(rule_cmd, 'rule')
+    for _, id in ipairs(ids) do
+      table.insert(rule_cmd, id)
+    end
 
-    local function launch_next()
-      if next_idx > total then
+    vim.system(rule_cmd, { text = true }, vim.schedule_wrap(function(rule_result)
+      if rule_result.code ~= 0 then
+        local msg = rule_result.stderr and vim.trim(rule_result.stderr) or ('exit code ' .. rule_result.code)
+        vim.notify('tracey quickfix ' .. subcmd .. ': rule lookup failed: ' .. msg, vim.log.levels.ERROR)
         return
       end
-      local id = ids[next_idx]
-      next_idx = next_idx + 1
 
-      local rule_cmd = { 'tracey', 'query' }
-      if root then
-        table.insert(rule_cmd, root)
-      end
-      table.insert(rule_cmd, 'rule')
-      table.insert(rule_cmd, id)
+      local all_entries = parse_rule_locations(rule_result.stdout or '', root)
 
-      vim.system(rule_cmd, { text = true }, vim.schedule_wrap(function(rule_result)
-        if rule_result.code ~= 0 then
-          failures = failures + 1
-        else
-          local rule_output = rule_result.stdout or ''
-          local entries = parse_rule_locations(rule_output, root)
-          for _, entry in ipairs(entries) do
-            entry.text = id
-            table.insert(all_entries, entry)
-          end
+      table.sort(all_entries, function(a, b)
+        if a.filename ~= b.filename then
+          return a.filename < b.filename
         end
+        return a.lnum < b.lnum
+      end)
 
-        completed = completed + 1
-        if completed == total then
-          table.sort(all_entries, function(a, b)
-            if a.filename ~= b.filename then
-              return a.filename < b.filename
-            end
-            return a.lnum < b.lnum
-          end)
+      vim.fn.setqflist(all_entries, 'r')
+      local open = require('tracey.config').get().open_quickfix
+        or function() vim.cmd('copen') end
+      open()
 
-          vim.fn.setqflist(all_entries, 'r')
-          local open = require('tracey.config').get().open_quickfix
-            or function() vim.cmd('copen') end
-          open()
-
-          local msg = string.format('tracey quickfix %s: %d entries', subcmd, #all_entries)
-          if failures > 0 then
-            msg = msg .. string.format(' (%d lookups failed)', failures)
-          end
-          vim.notify(msg, vim.log.levels.INFO)
-        else
-          launch_next()
-        end
-      end))
-    end
-
-    local initial = math.min(max_concurrent, total)
-    for _ = 1, initial do
-      launch_next()
-    end
+      vim.notify(
+        string.format('tracey quickfix %s: %d entries', subcmd, #all_entries),
+        vim.log.levels.INFO
+      )
+    end))
   end))
 end
 
