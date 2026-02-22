@@ -227,11 +227,23 @@ function M.query_quickfix(subcmd)
       return
     end
 
+    -- Resolve each ID via `tracey query rule <id>`, limiting concurrency to
+    -- avoid "too many open files" on large projects. Ideally tracey would
+    -- support batched rule queries so we wouldn't need N subprocesses at all.
+    local max_concurrent = 20
     local all_entries = {}
-    local pending = #ids
+    local total = #ids
+    local completed = 0
     local failures = 0
+    local next_idx = 1
 
-    for _, id in ipairs(ids) do
+    local function launch_next()
+      if next_idx > total then
+        return
+      end
+      local id = ids[next_idx]
+      next_idx = next_idx + 1
+
       local rule_cmd = { 'tracey', 'query' }
       if root then
         table.insert(rule_cmd, root)
@@ -251,8 +263,8 @@ function M.query_quickfix(subcmd)
           end
         end
 
-        pending = pending - 1
-        if pending == 0 then
+        completed = completed + 1
+        if completed == total then
           table.sort(all_entries, function(a, b)
             if a.filename ~= b.filename then
               return a.filename < b.filename
@@ -270,8 +282,15 @@ function M.query_quickfix(subcmd)
             msg = msg .. string.format(' (%d lookups failed)', failures)
           end
           vim.notify(msg, vim.log.levels.INFO)
+        else
+          launch_next()
         end
       end))
+    end
+
+    local initial = math.min(max_concurrent, total)
+    for _ = 1, initial do
+      launch_next()
     end
   end))
 end
