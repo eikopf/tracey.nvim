@@ -10,7 +10,18 @@ return {
     'typescript',
     'typescriptreact',
   },
-  root_markers = { '.tracey', 'Cargo.toml' },
+  root_dir = function(bufnr, cb)
+    local markers = { '.config/tracey/config.styx', '.tracey' }
+    local path = vim.api.nvim_buf_get_name(bufnr)
+    for dir in vim.fs.parents(path) do
+      for _, marker in ipairs(markers) do
+        if vim.uv.fs_stat(dir .. '/' .. marker) then
+          cb(dir)
+          return
+        end
+      end
+    end
+  end,
   -- HACK: tracey's LSP shutdown handler is currently a no-op, so the process
   -- may linger after Neovim exits (the default exit_timeout=false means Neovim
   -- doesn't wait). Setting a timeout ensures Neovim waits for the shutdown

@@ -14,8 +14,8 @@ function M.setup(opts)
   if cfg.filetypes then
     overrides.filetypes = cfg.filetypes
   end
-  if cfg.root_markers then
-    overrides.root_markers = cfg.root_markers
+  if cfg.root_dir then
+    overrides.root_dir = cfg.root_dir
   end
   if cfg.settings then
     overrides.settings = cfg.settings

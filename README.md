@@ -38,7 +38,9 @@ require('tracey').setup({
     'css', 'go', 'javascript', 'markdown',
     'python', 'rust', 'typescript', 'typescriptreact',
   },
-  root_markers = { '.tracey', 'Cargo.toml' }, -- root detection markers
+  root_dir = function(bufnr, cb)              -- root directory override
+    -- custom root detection logic; call cb(root_path) when found
+  end,
   settings = {},                        -- LSP settings table
   on_attach = function(client, bufnr)
     -- your keymaps here

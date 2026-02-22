@@ -4,7 +4,7 @@ local M = {}
 ---@field enable? boolean Whether setup() calls vim.lsp.enable('tracey') (default true)
 ---@field cmd? string[] LSP server command override
 ---@field filetypes? string[] Filetype override
----@field root_markers? string[] Root marker override
+---@field root_dir? fun(bufnr: integer, cb: fun(root: string)) Root directory override
 ---@field settings? table LSP settings override
 ---@field on_attach? fun(client: vim.lsp.Client, bufnr: integer) Callback on attach
 ---@field exit_timeout? integer|false Timeout in ms before SIGTERM on exit (default 500, false to disable)
