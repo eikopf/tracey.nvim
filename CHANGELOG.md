@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Replace `root_markers` with `root_dir` function for nested path support
+  - `root_markers` only matches filenames directly inside ancestor directories, so paths like `.config/tracey/config.styx` don't work
+  - New `root_dir` function walks parent directories and checks for nested marker paths
+  - Config option renamed: `root_markers` → `root_dir`
+
 ## [0.2.0] - 2026-02-22
 
 ### Fixed
