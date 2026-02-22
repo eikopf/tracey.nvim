@@ -122,6 +122,9 @@ Subcommands ~
                   Uses `web_port` from config if set (see |tracey.Config|).
 
 Query results open in a read-only scratch buffer. Press `q` to close.
+Press `<CR>` on a requirement line to jump to its definition via the LSP.
+Results are placed in the location list, so |:lnext| and |:lprev| navigate
+between multiple matches.
 
 Tab completion is supported for all subcommands.
 

@@ -101,6 +101,27 @@ do
 end
 
 -- ============================================================================
+-- CLI parse_requirement_id tests
+-- ============================================================================
+io.write('\n--- CLI parse_requirement_id ---\n')
+
+do
+  local cli = require('tracey.cli')
+
+  -- Valid requirement lines
+  assert_eq(cli._parse_requirement_id('  - auth.login'), 'auth.login', 'parses simple requirement ID')
+  assert_eq(cli._parse_requirement_id('  - todo.validation.title'), 'todo.validation.title', 'parses dotted requirement ID')
+  assert_eq(cli._parse_requirement_id('  - a'), 'a', 'parses single-char requirement ID')
+
+  -- Non-matching lines
+  assert_eq(cli._parse_requirement_id('# Heading'), nil, 'heading does not match')
+  assert_eq(cli._parse_requirement_id(''), nil, 'empty line does not match')
+  assert_eq(cli._parse_requirement_id('Summary: 5 rules'), nil, 'summary line does not match')
+  assert_eq(cli._parse_requirement_id('- auth.login'), nil, 'wrong indentation does not match')
+  assert_eq(cli._parse_requirement_id('    - auth.login'), nil, 'four-space indent does not match')
+end
+
+-- ============================================================================
 -- Summary
 -- ============================================================================
 io.write(string.format('\n=== %d passed, %d failed ===\n', pass, fail))
