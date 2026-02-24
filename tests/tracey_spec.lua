@@ -132,97 +132,128 @@ do
 end
 
 -- ============================================================================
--- CLI parse_all_requirement_ids tests
+-- CLI decode_json tests
 -- ============================================================================
-io.write('\n--- CLI parse_all_requirement_ids ---\n')
+io.write('\n--- CLI decode_json ---\n')
 
 do
   local cli = require('tracey.cli')
 
-  local lines = {
-    '# Uncovered requirements',
-    '',
-    '  - auth.login',
-    '  - auth.logout',
-    '',
-    'Summary: 2 rules',
-  }
-  assert_eq(cli._parse_all_requirement_ids(lines), { 'auth.login', 'auth.logout' }, 'extracts IDs from mixed output')
-  assert_eq(cli._parse_all_requirement_ids({}), {}, 'empty input returns empty list')
-  assert_eq(cli._parse_all_requirement_ids({ '# Nothing here' }), {}, 'no matches returns empty list')
+  -- Valid JSON
+  local data, err = cli._decode_json('{"id": "auth.login"}')
+  assert_eq(data, { id = 'auth.login' }, 'decodes valid JSON object')
+  assert_eq(err, nil, 'no error on valid JSON')
+
+  -- Valid JSON array
+  local arr, arr_err = cli._decode_json('[{"id": "a"}, {"id": "b"}]')
+  assert_eq(arr, { { id = 'a' }, { id = 'b' } }, 'decodes valid JSON array')
+  assert_eq(arr_err, nil, 'no error on valid JSON array')
+
+  -- Error envelope
+  local edata, eerr = cli._decode_json('{"error": "something went wrong"}')
+  assert_eq(edata, nil, 'error envelope returns nil data')
+  assert_eq(eerr, 'something went wrong', 'error envelope returns error message')
+
+  -- Malformed input
+  local bad, bad_err = cli._decode_json('not json at all')
+  assert_eq(bad, nil, 'malformed input returns nil')
+  assert_truthy(bad_err, 'malformed input returns error string')
+
+  -- Empty string
+  local empty, empty_err = cli._decode_json('')
+  assert_eq(empty, nil, 'empty string returns nil')
+  assert_eq(empty_err, 'empty input', 'empty string returns empty input error')
+
+  -- Nil input
+  local ndata, nerr = cli._decode_json(nil)
+  assert_eq(ndata, nil, 'nil input returns nil')
+  assert_eq(nerr, 'empty input', 'nil input returns empty input error')
 end
 
 -- ============================================================================
--- CLI parse_rule_locations tests
+-- CLI extract_ids_from_json tests
 -- ============================================================================
-io.write('\n--- CLI parse_rule_locations ---\n')
+io.write('\n--- CLI extract_ids_from_json ---\n')
 
 do
   local cli = require('tracey.cli')
 
-  -- Only "Defined in:" lines are extracted; implementation references are ignored
-  local output = table.concat({
-    '# auth.login',
-    '',
-    'Users must be able to log in with a username and password.',
-    '',
-    'Defined in: spec/auth.md:10',
-    '',
-    '',
-    '## example-spec/rust',
-    'Impl references:',
-    '  - src/auth.rs:42',
-    '  - src/auth.rs:100',
-  }, '\n')
-  local entries = cli._parse_rule_locations(output, '/project')
-  assert_eq(#entries, 1, 'parses only the Defined in line')
-  assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path for Defined in')
-  assert_eq(entries[1].lnum, 10, 'parses line number for Defined in')
-  assert_eq(entries[1].text, 'auth.login', 'extracts rule ID from heading')
+  -- uncovered/untested format: bySection with multiple sections and rules
+  local data = {
+    bySection = {
+      { section = 'auth', rules = { { id = 'auth.login' }, { id = 'auth.logout' } } },
+      { section = 'todo', rules = { { id = 'todo.create' } } },
+    },
+  }
+  assert_eq(cli._extract_ids_from_json(data), { 'auth.login', 'auth.logout', 'todo.create' },
+    'extracts IDs from bySection with multiple sections')
 
-  -- Absolute paths should not be prefixed
-  local abs_output = '# abs.rule\n\nDefined in: /absolute/path/file.rs:5'
-  local abs_entries = cli._parse_rule_locations(abs_output, '/project')
-  assert_eq(abs_entries[1].filename, '/absolute/path/file.rs', 'absolute path not prefixed')
+  -- stale format: refs with deduplication
+  local stale_data = {
+    refs = {
+      { currentId = 'auth.login', file = 'src/auth.rs', line = 10, referenceId = 'old.auth.login' },
+      { currentId = 'auth.login', file = 'src/auth.rs', line = 20, referenceId = 'old.auth.login2' },
+      { currentId = 'auth.logout', file = 'src/auth.rs', line = 30, referenceId = 'old.auth.logout' },
+    },
+  }
+  assert_eq(cli._extract_ids_from_json(stale_data), { 'auth.login', 'auth.logout' },
+    'extracts deduplicated IDs from refs')
 
-  -- Nil root should leave relative paths as-is
-  local nil_root_entries = cli._parse_rule_locations('# rel.rule\n\nDefined in: relative/file.rs:1', nil)
-  assert_eq(nil_root_entries[1].filename, 'relative/file.rs', 'nil root leaves relative path')
+  -- Empty data
+  assert_eq(cli._extract_ids_from_json({}), {}, 'empty table returns empty list')
 
-  -- Batched output: multiple rules in a single response
-  local batched = table.concat({
-    '# auth.login',
-    '',
-    'Users must be able to log in.',
-    '',
-    'Defined in: spec/auth.md:10',
-    '',
-    '',
-    '## example-spec/rust',
-    'Impl references:',
-    '  - src/auth.rs:42',
-    '',
-    '---',
-    '',
-    '# auth.logout',
-    '',
-    'Users must be able to log out.',
-    '',
-    'Defined in: spec/auth.md:25',
-    '',
-    '',
-    '## example-spec/rust',
-    'Impl references:',
-    '  - src/auth.rs:80',
-  }, '\n')
-  local batched_entries = cli._parse_rule_locations(batched, '/project')
-  assert_eq(#batched_entries, 2, 'batched output parses both rules')
-  assert_eq(batched_entries[1].text, 'auth.login', 'batched: first entry has correct rule ID')
+  -- bySection with empty rules
+  local empty_rules = { bySection = { { section = 'auth', rules = {} } } }
+  assert_eq(cli._extract_ids_from_json(empty_rules), {}, 'empty rules returns empty list')
+end
+
+-- ============================================================================
+-- CLI parse_rule_locations_json tests
+-- ============================================================================
+io.write('\n--- CLI parse_rule_locations_json ---\n')
+
+do
+  local cli = require('tracey.cli')
+
+  -- Single object (single rule query)
+  local single = { id = 'auth.login', sourceFile = 'spec/auth.md', sourceLine = 10 }
+  local entries = cli._parse_rule_locations_json(single, '/project')
+  assert_eq(#entries, 1, 'single object produces one entry')
+  assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path with root')
+  assert_eq(entries[1].lnum, 10, 'parses sourceLine')
+  assert_eq(entries[1].text, 'auth.login', 'uses rule id as text')
+
+  -- Array (batched rule query)
+  local batched = {
+    { id = 'auth.login', sourceFile = 'spec/auth.md', sourceLine = 10 },
+    { id = 'auth.logout', sourceFile = 'spec/auth.md', sourceLine = 25 },
+  }
+  local batched_entries = cli._parse_rule_locations_json(batched, '/project')
+  assert_eq(#batched_entries, 2, 'batched array produces two entries')
+  assert_eq(batched_entries[1].text, 'auth.login', 'batched: first entry ID')
   assert_eq(batched_entries[1].filename, '/project/spec/auth.md', 'batched: first entry filename')
-  assert_eq(batched_entries[1].lnum, 10, 'batched: first entry line number')
-  assert_eq(batched_entries[2].text, 'auth.logout', 'batched: second entry has correct rule ID')
-  assert_eq(batched_entries[2].filename, '/project/spec/auth.md', 'batched: second entry filename')
+  assert_eq(batched_entries[2].text, 'auth.logout', 'batched: second entry ID')
   assert_eq(batched_entries[2].lnum, 25, 'batched: second entry line number')
+
+  -- Absolute path should not be prefixed
+  local abs = { id = 'abs.rule', sourceFile = '/absolute/path/file.md', sourceLine = 5 }
+  local abs_entries = cli._parse_rule_locations_json(abs, '/project')
+  assert_eq(abs_entries[1].filename, '/absolute/path/file.md', 'absolute path not prefixed')
+
+  -- Nil root leaves relative path as-is
+  local rel_entries = cli._parse_rule_locations_json(
+    { id = 'rel.rule', sourceFile = 'relative/file.md', sourceLine = 1 }, nil)
+  assert_eq(rel_entries[1].filename, 'relative/file.md', 'nil root leaves relative path')
+
+  -- Missing sourceFile/sourceLine skips the rule
+  local missing = {
+    { id = 'good', sourceFile = 'spec/a.md', sourceLine = 1 },
+    { id = 'no-file' },
+    { id = 'no-line', sourceFile = 'spec/b.md' },
+  }
+  local missing_entries = cli._parse_rule_locations_json(missing, '/project')
+  assert_eq(#missing_entries, 1, 'skips rules missing sourceFile or sourceLine')
+  assert_eq(missing_entries[1].text, 'good', 'only includes complete rules')
 end
 
 -- ============================================================================

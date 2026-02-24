@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- Use `tracey query --json` for quickfix queries instead of parsing text output
 - Use batched `tracey query rule id1 id2 ...` for quickfix population instead
   of spawning one subprocess per requirement
 

@@ -162,54 +162,88 @@ function M.query(subcmd)
   end))
 end
 
---- Extract all requirement IDs from query output lines.
----@param lines string[]
+--- Decode a JSON string from tracey CLI output.
+--- Returns nil and an error message on failure or if the response is an error envelope.
+---@param str string
+---@return table|nil, string|nil
+local function decode_json(str)
+  if not str or str == '' then
+    return nil, 'empty input'
+  end
+  local ok, data = pcall(vim.json.decode, str)
+  if not ok then
+    return nil, 'JSON decode failed: ' .. tostring(data)
+  end
+  if type(data) == 'table' and not vim.islist(data) and data.error then
+    return nil, data.error
+  end
+  return data, nil
+end
+M._decode_json = decode_json
+
+--- Extract requirement IDs from decoded JSON query output (uncovered/untested/stale).
+---@param data table  Decoded JSON from tracey query --json
 ---@return string[]
-local function parse_all_requirement_ids(lines)
+local function extract_ids_from_json(data)
   local ids = {}
-  for _, line in ipairs(lines) do
-    local id = parse_requirement_id(line)
-    if id then
-      table.insert(ids, id)
+  -- uncovered/untested: { bySection: [{ section, rules: [{ id }] }] }
+  if data.bySection then
+    for _, section in ipairs(data.bySection) do
+      if section.rules then
+        for _, rule in ipairs(section.rules) do
+          if rule.id then
+            table.insert(ids, rule.id)
+          end
+        end
+      end
     end
+    return ids
+  end
+  -- stale: { refs: [{ currentId }] }
+  if data.refs then
+    local seen = {}
+    for _, ref in ipairs(data.refs) do
+      if ref.currentId and not seen[ref.currentId] then
+        seen[ref.currentId] = true
+        table.insert(ids, ref.currentId)
+      end
+    end
+    return ids
   end
   return ids
 end
-M._parse_all_requirement_ids = parse_all_requirement_ids
+M._extract_ids_from_json = extract_ids_from_json
 
---- Parse definition locations from `tracey query rule` output (single or batched).
---- Tracks "# <id>" markdown headings to associate each "Defined in:" with its requirement.
---- Matches only "Defined in: <file>:<line>" (the spec item itself),
---- ignoring implementation references listed under "References:".
----@param rule_output string
+--- Parse rule locations from decoded JSON rule output (single or batched).
+---@param data table  Decoded JSON from tracey query --json rule
 ---@param root string|nil  Project root for resolving relative paths
 ---@return {filename: string, lnum: integer, text: string}[]
-local function parse_rule_locations(rule_output, root)
+local function parse_rule_locations_json(data, root)
   local entries = {}
-  local current_id = nil
-  for line in rule_output:gmatch('[^\n]+') do
-    local id = line:match('^# (%S+)')
-    if id then
-      current_id = id
-    end
-    -- Match "Defined in: path/to/file.rs:42"
-    local file, lnum = line:match('^Defined in: (.+):(%d+)$')
-    if file and lnum then
+  -- Normalize: single object has .id, batched is an array
+  local rules = vim.islist(data) and data or { data }
+  for _, rule in ipairs(rules) do
+    if rule.sourceFile and rule.sourceLine then
+      local file = rule.sourceFile
       if root and not file:match('^/') then
         file = root .. '/' .. file
       end
-      table.insert(entries, { filename = file, lnum = tonumber(lnum), text = current_id or '' })
+      table.insert(entries, {
+        filename = file,
+        lnum = rule.sourceLine,
+        text = rule.id or '',
+      })
     end
   end
   return entries
 end
-M._parse_rule_locations = parse_rule_locations
+M._parse_rule_locations_json = parse_rule_locations_json
 
 --- Run a tracey query and populate the quickfix list with resolved locations.
 ---@param subcmd string  One of "uncovered", "untested", "stale"
 function M.query_quickfix(subcmd)
   local root = M.find_root()
-  local cmd = { 'tracey', 'query' }
+  local cmd = { 'tracey', 'query', '--json' }
   if root then
     table.insert(cmd, root)
   end
@@ -224,17 +258,21 @@ function M.query_quickfix(subcmd)
       return
     end
 
-    local output = result.stdout or ''
-    local lines = vim.split(output, '\n', { trimempty = true })
-    local ids = parse_all_requirement_ids(lines)
+    local data, err = decode_json(result.stdout or '')
+    if not data then
+      vim.notify('tracey quickfix ' .. subcmd .. ': ' .. (err or 'unknown error'), vim.log.levels.ERROR)
+      return
+    end
+
+    local ids = extract_ids_from_json(data)
 
     if #ids == 0 then
       vim.notify('tracey quickfix ' .. subcmd .. ': no requirements found', vim.log.levels.INFO)
       return
     end
 
-    -- Resolve all IDs in a single batched `tracey query rule id1 id2 ...` call
-    local rule_cmd = { 'tracey', 'query' }
+    -- Resolve all IDs in a single batched `tracey query --json rule id1 id2 ...` call
+    local rule_cmd = { 'tracey', 'query', '--json' }
     if root then
       table.insert(rule_cmd, root)
     end
@@ -250,7 +288,13 @@ function M.query_quickfix(subcmd)
         return
       end
 
-      local all_entries = parse_rule_locations(rule_result.stdout or '', root)
+      local rule_data, rule_err = decode_json(rule_result.stdout or '')
+      if not rule_data then
+        vim.notify('tracey quickfix ' .. subcmd .. ': ' .. (rule_err or 'unknown error'), vim.log.levels.ERROR)
+        return
+      end
+
+      local all_entries = parse_rule_locations_json(rule_data, root)
 
       table.sort(all_entries, function(a, b)
         if a.filename ~= b.filename then
