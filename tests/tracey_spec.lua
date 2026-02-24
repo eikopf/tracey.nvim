@@ -171,6 +171,22 @@ do
 end
 
 -- ============================================================================
+-- CLI normalize_id tests
+-- ============================================================================
+io.write('\n--- CLI normalize_id ---\n')
+
+do
+  local cli = require('tracey.cli')
+
+  assert_eq(cli._normalize_id('auth.login'), 'auth.login', 'string ID passes through')
+  assert_eq(cli._normalize_id({ base = 'auth.login', version = 1 }), 'auth.login',
+    'object ID extracts base')
+  assert_eq(cli._normalize_id(nil), nil, 'nil returns nil')
+  assert_eq(cli._normalize_id(42), nil, 'number returns nil')
+  assert_eq(cli._normalize_id({}), nil, 'empty table returns nil')
+end
+
+-- ============================================================================
 -- CLI extract_ids_from_json tests
 -- ============================================================================
 io.write('\n--- CLI extract_ids_from_json ---\n')
@@ -178,26 +194,52 @@ io.write('\n--- CLI extract_ids_from_json ---\n')
 do
   local cli = require('tracey.cli')
 
-  -- uncovered/untested format: bySection with multiple sections and rules
+  -- uncovered/untested format with object IDs (actual tracey output)
   local data = {
     bySection = {
-      { section = 'auth', rules = { { id = 'auth.login' }, { id = 'auth.logout' } } },
-      { section = 'todo', rules = { { id = 'todo.create' } } },
+      {
+        section = 'auth',
+        rules = {
+          { id = { base = 'auth.login', version = 1 } },
+          { id = { base = 'auth.logout', version = 1 } },
+        },
+      },
+      { section = 'todo', rules = { { id = { base = 'todo.create', version = 1 } } } },
     },
   }
   assert_eq(cli._extract_ids_from_json(data), { 'auth.login', 'auth.logout', 'todo.create' },
-    'extracts IDs from bySection with multiple sections')
+    'extracts IDs from bySection with object IDs')
 
-  -- stale format: refs with deduplication
+  -- Also works with plain string IDs (backwards compatibility)
+  local string_data = {
+    bySection = {
+      { section = 'auth', rules = { { id = 'auth.login' }, { id = 'auth.logout' } } },
+    },
+  }
+  assert_eq(cli._extract_ids_from_json(string_data), { 'auth.login', 'auth.logout' },
+    'extracts IDs from bySection with string IDs')
+
+  -- stale format: refs with deduplication (object IDs)
   local stale_data = {
     refs = {
-      { currentId = 'auth.login', file = 'src/auth.rs', line = 10, referenceId = 'old.auth.login' },
-      { currentId = 'auth.login', file = 'src/auth.rs', line = 20, referenceId = 'old.auth.login2' },
-      { currentId = 'auth.logout', file = 'src/auth.rs', line = 30, referenceId = 'old.auth.logout' },
+      { currentId = { base = 'auth.login', version = 2 }, file = 'src/auth.rs', line = 10 },
+      { currentId = { base = 'auth.login', version = 2 }, file = 'src/auth.rs', line = 20 },
+      { currentId = { base = 'auth.logout', version = 1 }, file = 'src/auth.rs', line = 30 },
     },
   }
   assert_eq(cli._extract_ids_from_json(stale_data), { 'auth.login', 'auth.logout' },
-    'extracts deduplicated IDs from refs')
+    'extracts deduplicated IDs from refs with object IDs')
+
+  -- stale format with string IDs (backwards compatibility)
+  local stale_string = {
+    refs = {
+      { currentId = 'auth.login', file = 'src/auth.rs', line = 10 },
+      { currentId = 'auth.login', file = 'src/auth.rs', line = 20 },
+      { currentId = 'auth.logout', file = 'src/auth.rs', line = 30 },
+    },
+  }
+  assert_eq(cli._extract_ids_from_json(stale_string), { 'auth.login', 'auth.logout' },
+    'extracts deduplicated IDs from refs with string IDs')
 
   -- Empty data
   assert_eq(cli._extract_ids_from_json({}), {}, 'empty table returns empty list')
@@ -215,18 +257,27 @@ io.write('\n--- CLI parse_rule_locations_json ---\n')
 do
   local cli = require('tracey.cli')
 
-  -- Single object (single rule query)
-  local single = { id = 'auth.login', sourceFile = 'spec/auth.md', sourceLine = 10 }
+  -- Single object with object ID (actual tracey output)
+  local single = {
+    id = { base = 'auth.login', version = 1 },
+    sourceFile = 'spec/auth.md',
+    sourceLine = 10,
+  }
   local entries = cli._parse_rule_locations_json(single, '/project')
   assert_eq(#entries, 1, 'single object produces one entry')
   assert_eq(entries[1].filename, '/project/spec/auth.md', 'resolves relative path with root')
   assert_eq(entries[1].lnum, 10, 'parses sourceLine')
-  assert_eq(entries[1].text, 'auth.login', 'uses rule id as text')
+  assert_eq(entries[1].text, 'auth.login', 'uses rule id base as text')
 
-  -- Array (batched rule query)
+  -- Single object with string ID (backwards compatibility)
+  local single_str = { id = 'auth.login', sourceFile = 'spec/auth.md', sourceLine = 10 }
+  local str_entries = cli._parse_rule_locations_json(single_str, '/project')
+  assert_eq(str_entries[1].text, 'auth.login', 'string id works as text')
+
+  -- Array (batched rule query) with object IDs
   local batched = {
-    { id = 'auth.login', sourceFile = 'spec/auth.md', sourceLine = 10 },
-    { id = 'auth.logout', sourceFile = 'spec/auth.md', sourceLine = 25 },
+    { id = { base = 'auth.login', version = 1 }, sourceFile = 'spec/auth.md', sourceLine = 10 },
+    { id = { base = 'auth.logout', version = 1 }, sourceFile = 'spec/auth.md', sourceLine = 25 },
   }
   local batched_entries = cli._parse_rule_locations_json(batched, '/project')
   assert_eq(#batched_entries, 2, 'batched array produces two entries')
@@ -236,20 +287,20 @@ do
   assert_eq(batched_entries[2].lnum, 25, 'batched: second entry line number')
 
   -- Absolute path should not be prefixed
-  local abs = { id = 'abs.rule', sourceFile = '/absolute/path/file.md', sourceLine = 5 }
+  local abs = { id = { base = 'abs.rule', version = 1 }, sourceFile = '/absolute/path/file.md', sourceLine = 5 }
   local abs_entries = cli._parse_rule_locations_json(abs, '/project')
   assert_eq(abs_entries[1].filename, '/absolute/path/file.md', 'absolute path not prefixed')
 
   -- Nil root leaves relative path as-is
   local rel_entries = cli._parse_rule_locations_json(
-    { id = 'rel.rule', sourceFile = 'relative/file.md', sourceLine = 1 }, nil)
+    { id = { base = 'rel.rule', version = 1 }, sourceFile = 'relative/file.md', sourceLine = 1 }, nil)
   assert_eq(rel_entries[1].filename, 'relative/file.md', 'nil root leaves relative path')
 
   -- Missing sourceFile/sourceLine skips the rule
   local missing = {
-    { id = 'good', sourceFile = 'spec/a.md', sourceLine = 1 },
-    { id = 'no-file' },
-    { id = 'no-line', sourceFile = 'spec/b.md' },
+    { id = { base = 'good', version = 1 }, sourceFile = 'spec/a.md', sourceLine = 1 },
+    { id = { base = 'no-file', version = 1 } },
+    { id = { base = 'no-line', version = 1 }, sourceFile = 'spec/b.md' },
   }
   local missing_entries = cli._parse_rule_locations_json(missing, '/project')
   assert_eq(#missing_entries, 1, 'skips rules missing sourceFile or sourceLine')
