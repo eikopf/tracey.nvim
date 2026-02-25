@@ -12,6 +12,12 @@ local function eager_start(cfg)
     table.insert(dirs, dir)
   end
 
+  -- cfg.exit_timeout can be false (disable), so a plain `or` would swallow it
+  local exit_timeout = 500
+  if cfg.exit_timeout ~= nil then
+    exit_timeout = cfg.exit_timeout
+  end
+
   local function check(i)
     if i > #dirs then return end
     vim.uv.fs_stat(dirs[i] .. '/' .. marker, function(_, stat)
@@ -21,7 +27,7 @@ local function eager_start(cfg)
             name = 'tracey',
             cmd = cfg.cmd or { 'tracey', 'lsp' },
             root_dir = dirs[i],
-            exit_timeout = (cfg.exit_timeout ~= nil) and cfg.exit_timeout or 500,
+            exit_timeout = exit_timeout,
           })
         end)
       else
