@@ -33,18 +33,19 @@ If you want to customize behavior, call `setup()` with any of the options below:
 ```lua
 require('tracey').setup({
   enable = true,                        -- auto-call vim.lsp.enable('tracey') (default: true)
-  cmd = { 'tracey', 'lsp' },           -- LSP server command
+  cmd = { 'tracey', 'lsp' },            -- LSP server command
   filetypes = {                         -- filetypes to attach to
     'markdown', 'rust',
   },
-  root_dir = function(bufnr, cb)              -- root directory override
-    -- custom root detection logic; call cb(root_path) when found
+  root_dir = function(bufnr, cb)        -- root directory override
+    -- custom root detection logic;
+    -- call cb(root_path) when found
   end,
   settings = {},                        -- LSP settings table
   on_attach = function(client, bufnr)
     -- your keymaps here
   end,
-  exit_timeout = 500,                    -- ms before SIGTERM on exit (false = disable)
+  exit_timeout = 500,                   -- ms before SIGTERM on exit (false = disable)
   web_port = nil,                       -- port for `tracey web` (nil = let tracey choose)
   query_layout = {                      -- layout for query scratch buffers
     split = 'botright new',             -- vim split command (default: 'botright new')
@@ -53,7 +54,10 @@ require('tracey').setup({
   },
   -- query_layout can also be a function:
   -- query_layout = function(title, line_count)
-  --   return { split = 'botright new', height = math.min(line_count + 1, 20) }
+  --   return { 
+  --     split = 'botright new',
+  --     height = math.min(line_count + 1, 20)
+  --   }
   -- end,
   open_quickfix = nil,                  -- called after :Tracey quickfix populates the list
                                         -- (default: vim.cmd('copen'); see "Alternative quickfix UIs")
