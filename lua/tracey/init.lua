@@ -1,5 +1,38 @@
 local M = {}
 
+--- Asynchronously search upward from cwd for .config/tracey/config.styx
+--- and pre-start the LSP client if found. Best-effort: silently does nothing
+--- on any failure.
+---@param cfg tracey.Config
+local function eager_start(cfg)
+  local marker = '.config/tracey/config.styx'
+  local cwd = vim.fn.getcwd()
+  local dirs = { cwd }
+  for dir in vim.fs.parents(cwd) do
+    table.insert(dirs, dir)
+  end
+
+  local function check(i)
+    if i > #dirs then return end
+    vim.uv.fs_stat(dirs[i] .. '/' .. marker, function(_, stat)
+      if stat then
+        vim.schedule(function()
+          pcall(vim.lsp.start, {
+            name = 'tracey',
+            cmd = cfg.cmd or { 'tracey', 'lsp' },
+            root_dir = dirs[i],
+            exit_timeout = (cfg.exit_timeout ~= nil) and cfg.exit_timeout or 500,
+          })
+        end)
+      else
+        check(i + 1)
+      end
+    end)
+  end
+
+  check(1)
+end
+
 ---@param opts? tracey.Config
 function M.setup(opts)
   local config = require('tracey.config')
@@ -38,6 +71,10 @@ function M.setup(opts)
 
   if cfg.enable then
     vim.lsp.enable('tracey')
+  end
+
+  if cfg.enable and cfg.eager then
+    eager_start(cfg)
   end
 end
 
