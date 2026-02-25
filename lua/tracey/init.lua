@@ -1,8 +1,9 @@
 local M = {}
 
 --- Asynchronously search upward from cwd for .config/tracey/config.styx
---- and pre-start the LSP client if found. Best-effort: silently does nothing
---- on any failure.
+--- and pre-start the tracey daemon if found. The daemon indexes the project
+--- in the background so `tracey lsp` connects instantly when a Rust file is
+--- opened. Best-effort: silently does nothing on any failure.
 ---@param cfg tracey.Config
 local function eager_start(cfg)
   local marker = '.config/tracey/config.styx'
@@ -12,23 +13,12 @@ local function eager_start(cfg)
     table.insert(dirs, dir)
   end
 
-  -- cfg.exit_timeout can be false (disable), so a plain `or` would swallow it
-  local exit_timeout = 500
-  if cfg.exit_timeout ~= nil then
-    exit_timeout = cfg.exit_timeout
-  end
-
   local function check(i)
     if i > #dirs then return end
     vim.uv.fs_stat(dirs[i] .. '/' .. marker, function(_, stat)
       if stat then
         vim.schedule(function()
-          pcall(vim.lsp.start, {
-            name = 'tracey',
-            cmd = cfg.cmd or { 'tracey', 'lsp' },
-            root_dir = dirs[i],
-            exit_timeout = exit_timeout,
-          })
+          pcall(vim.system, { 'tracey', 'daemon', dirs[i] }, { text = true })
         end)
       else
         check(i + 1)
