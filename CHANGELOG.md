@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `eager` config option (default `true`) to pre-launch the tracey daemon at
+  startup. Searches upward from cwd for `.config/tracey/config.styx` and runs
+  `tracey daemon` so the index is warm when the LSP connects (#6)
+
 ### Changed
 - Use `tracey query --json` for quickfix queries instead of parsing text output
 - Use batched `tracey query rule id1 id2 ...` for quickfix population instead
   of spawning one subprocess per requirement
 
 ### Fixed
+- Fix `exit_timeout = false` being swallowed by Lua truthiness check
 - Fix tests hanging on success in fish shell (explicit `qall!` from Lua)
 
 ## [0.5.0] - 2026-02-22
