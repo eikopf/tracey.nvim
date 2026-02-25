@@ -11,7 +11,7 @@ local M = {}
 ---@field web_port? integer Port for `tracey web` (omitted if nil, letting tracey choose)
 ---@field query_layout? tracey.QueryLayout|fun(title: string, line_count: integer): tracey.QueryLayout? Layout options for query scratch buffers
 ---@field open_quickfix? fun() Called after populating the quickfix list (default: vim.cmd('copen'))
----@field eager? boolean Eagerly search for config.styx at startup and pre-start the tracey daemon so it's warm when the LSP connects (default false)
+---@field eager? boolean Eagerly search for config.styx at startup and pre-start the tracey daemon so it's warm when the LSP connects (default true)
 ---@field lsp? table Escape hatch: passed verbatim to vim.lsp.config()
 
 ---@class tracey.QueryLayout
@@ -22,6 +22,7 @@ local M = {}
 ---@type tracey.Config
 local defaults = {
   enable = true,
+  eager = true,
 }
 
 ---@type tracey.Config

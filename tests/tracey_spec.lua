@@ -40,7 +40,7 @@ do
   config.set()
   local defaults = config.get()
   assert_eq(defaults.enable, true, 'default enable is true')
-  assert_eq(defaults.eager, nil, 'default eager is nil')
+  assert_eq(defaults.eager, true, 'default eager is true')
   assert_eq(defaults.cmd, nil, 'default cmd is nil')
   assert_eq(defaults.filetypes, nil, 'default filetypes is nil')
 

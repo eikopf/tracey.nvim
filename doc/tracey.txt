@@ -61,7 +61,7 @@ optional.
 >lua
   require('tracey').setup({
     enable = true,            -- call vim.lsp.enable('tracey') (default: true)
-    eager = false,            -- pre-start daemon at startup (default: false)
+    eager = true,             -- pre-start daemon at startup (default: true)
     cmd = { 'tracey', 'lsp' },  -- LSP server command
     filetypes = { 'rust', 'markdown' }, -- filetypes to attach to
     root_dir = function(bufnr, cb)  -- root directory override
@@ -93,7 +93,7 @@ Fields ~
                             The daemon indexes the project in the background so
                             `tracey lsp` connects instantly when a Rust file is
                             opened. Best-effort: silently ignored on failure.
-                            Requires `enable`. Default: `false`
+                            Requires `enable`. Default: `true`
   `cmd`           string[]  LSP server command override.
   `filetypes`     string[]  Filetype override for LSP attachment.
   `root_dir`      function  Root directory override. Receives `(bufnr, cb)`;
